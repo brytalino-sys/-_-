@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Калькулятор купажа масел</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap&subset=cyrillic">
+<style>
+/* Layout: one working column – inputs on top, results under them, reference material folded at the bottom */
+:root {
+  --bg: #f3f5f1;            /* page ground, slight olive bias */
+  --surface: #ffffff;
+  --surface-2: #eef1ea;
+  --fg: #1b231e;
+  --muted: #5d685f;
+  --line: #d6ddd3;
+  --accent: #2f5d3f;        /* deep leaf green: primary actions */
+  --accent-fg: #ffffff;
+  --accent-soft: #e2ece3;
+  --gold: #a46f00;          /* oil gold: highlights */
+  --c-sfa: #8c5a3c;
+  --c-mufa: #c9a227;
+  --c-w6: #d9773a;
+  --c-w3: #2f7f8f;
+  --good: #2e7d4f; --good-bg: #e3f1e8;
+  --warn: #9a5b00; --warn-bg: #fbefd9;
+  --bad: #b3261e;  --bad-bg: #fbe4e2;
+  --f-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121612; --surface: #1a201b; --surface-2: #222a23; --fg: #e6ece5; --muted: #9eaa9f; --line: #2f3a31;
+  --accent: #7fbf90; --accent-fg: #0f1a12; --accent-soft: #23332a; --gold: #e0b14a;
+  --c-sfa: #c08a68; --c-mufa: #e2c04f; --c-w6: #ef9a5f; --c-w3: #5fb6c6;
+  --good: #7cc99a; --good-bg: #1d3326; --warn: #e8b35a; --warn-bg: #3a2d14; --bad: #f08a80; --bad-bg: #3d1d1b;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121612; --surface: #1a201b; --surface-2: #222a23; --fg: #e6ece5; --muted: #9eaa9f; --line: #2f3a31;
+  --accent: #7fbf90; --accent-fg: #0f1a12; --accent-soft: #23332a; --gold: #e0b14a;
+  --c-sfa: #c08a68; --c-mufa: #e2c04f; --c-w6: #ef9a5f; --c-w3: #5fb6c6;
+  --good: #7cc99a; --good-bg: #1d3326; --warn: #e8b35a; --warn-bg: #3a2d14; --bad: #f08a80; --bad-bg: #3d1d1b;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; }
+h2 { font-size: 20px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+.num, td.n, .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+header.top { padding-top: 28px; display: grid; gap: 10px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+header.top p { max-width: 68ch; color: var(--muted); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; justify-content: space-between; }
+
+.scroll { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+td.n, th.n { text-align: right; }
+
+input[type=text], select { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; min-height: 36px; }
+input.numin { width: 76px; text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+select.oil { min-width: 210px; max-width: 100%; }
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+input.bad { border-color: var(--bad); }
+
+button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; min-height: 36px; padding: 6px 14px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button.ghost { background: transparent; }
+button.icon { padding: 4px 10px; min-width: 36px; color: var(--muted); background: transparent; border-color: transparent; font-size: 18px; line-height: 1; }
+button.icon:hover { color: var(--bad); }
+button:disabled { opacity: .55; cursor: default; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.chip.good { background: var(--good-bg); color: var(--good); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.bad { background: var(--bad-bg); color: var(--bad); }
+.chip.neutral { background: var(--surface-2); color: var(--muted); }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+
+.optgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 20px; }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 13px; color: var(--muted); }
+.inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cons label { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.msg { padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+.msg.good { background: var(--good-bg); color: var(--good); }
+.msg.bad { background: var(--bad-bg); color: var(--bad); }
+.msg.warn { background: var(--warn-bg); color: var(--warn); }
+.mode-opt { display: none; }
+body.opt .mode-opt { display: revert; }
+body.opt div.mode-opt, body.opt section.mode-opt { display: grid; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; display: grid; gap: 2px; align-content: start; background: var(--surface); }
+.tile.key { border-color: var(--gold); box-shadow: inset 0 3px 0 var(--gold); }
+.tile .lab { font-size: 12.5px; color: var(--muted); }
+.tile .val { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 500; }
+.tile .hint { font-size: 12px; color: var(--muted); }
+
+.bars { display: grid; gap: 8px; align-content: start; }
+.two > div { align-content: start; }
+td.grp { white-space: nowrap; }
+.barrow { display: grid; grid-template-columns: minmax(110px, 190px) 1fr; gap: 10px; align-items: center; }
+.barrow .name { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barrow.total .name { font-weight: 700; }
+.bar { display: flex; height: 22px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
+.barrow.total .bar { height: 30px; outline: 2px solid var(--fg); outline-offset: 1px; }
+.bar span { display: flex; align-items: center; justify-content: center; font-family: var(--f-mono); font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.sfa { background: var(--c-sfa); } .mufa { background: var(--c-mufa); } .w6 { background: var(--c-w6); } .w3 { background: var(--c-w3); }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } .barrow { grid-template-columns: 96px 1fr; } }
+td .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+tr.sum td { font-weight: 600; border-top: 2px solid var(--line); }
+
+details.panel > summary { cursor: pointer; font-family: var(--f-display); font-weight: 700; font-size: 18px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details.panel > summary::after { content: "+"; color: var(--muted); font-family: var(--f-mono); }
+details.panel[open] > summary::after { content: "–"; }
+.fagrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.fagrid label { display: grid; gap: 2px; font-size: 12.5px; color: var(--muted); }
+.fagrid input { width: 100%; }
+.formula { font-family: var(--f-mono); font-size: 13px; background: var(--surface-2); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: nowrap; }
+.prose { display: grid; gap: 10px; max-width: 75ch; }
+.prose ol, .prose ul { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+@media (max-width: 640px) {
+  #rows-table thead { display: none; }
+  #rows-table, #rows-table tbody { display: block; }
+  #rows-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  #rows-table td { display: block; border: 0; padding: 0; text-align: left; }
+  #rows-table td:first-child { grid-column: 1 / -1; }
+  body:not(.opt) #rows-table td.mode-opt { display: none; }
+  #rows-table td[data-label]::before { content: attr(data-label); display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  #rows-table input.numin { width: 100%; }
+  #rows-table select.oil { width: 100%; min-width: 0; }
+  #rows-table td.del { grid-column: 1 / -1; text-align: right; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">ω-6 : ω-3 · AI · TI · h/H · COX · йодное число</div>
+    <h1>Калькулятор купажа растительных масел</h1>
+    <p>Выберите масла, задайте доли или поручите подбор рецептуры симплекс-методу. Состав купажа считается по массовому балансу жирных кислот; результаты можно выгрузить в Excel с формулами.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="h-comp">
+    <div class="panel-head">
+      <h2 id="h-comp">Состав купажа</h2>
+      <div class="seg" role="group" aria-label="Режим расчёта">
+        <button type="button" id="mode-manual" aria-pressed="true">Ручной расчёт</button>
+        <button type="button" id="mode-opt" aria-pressed="false">Оптимизация</button>
+      </div>
+    </div>
+    <p class="small muted" id="example-note">Пример: подсолнечное, рапсовое масло и масло чиа. Замените масла и доли на свои.</p>
+    <div class="scroll">
+      <table id="rows-table">
+        <thead><tr>
+          <th>Масло</th><th class="n">Доля, %</th>
+          <th class="n mode-opt">Мин., %</th><th class="n mode-opt">Макс., %</th>
+          <th class="n">Цена, руб./кг</th><th class="n">ω-6 : ω-3</th><th></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="btns">
+      <button type="button" id="add-row">+ Добавить масло</button>
+      <button type="button" id="normalize" class="ghost">Привести доли к 100 %</button>
+      <span id="sum-chip"></span>
+    </div>
+
+    <div class="mode-opt" style="gap:14px">
+      <h3>Подбор рецептуры</h3>
+      <div class="optgrid">
+        <label class="field"><span>Цель</span>
+          <select id="objective">
+            <option value="cox">Минимум окисляемости COX</option>
+            <option value="cost">Минимум стоимости</option>
+            <option value="ai">Минимум индекса атерогенности AI</option>
+          </select>
+        </label>
+        <div class="field"><span>Соотношение ω-6 : ω-3 в купаже</span>
+          <div class="inline">от <input type="text" inputmode="decimal" class="numin" id="r-min" aria-label="ω-6 : ω-3 от"> до <input type="text" inputmode="decimal" class="numin" id="r-max" aria-label="ω-6 : ω-3 до"> : 1</div>
+        </div>
+      </div>
+      <div class="cons optgrid" id="cons"></div>
+      <div class="btns"><button type="button" class="primary" id="run-opt">Подобрать рецептуру</button>
+        <span class="small muted">Границы долей каждого масла задаются в столбцах «Мин.» и «Макс.».</span></div>
+      <div id="opt-msg" class="msg" hidden></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-res">
+    <div class="panel-head">
+      <h2 id="h-res">Показатели купажа</h2>
+      <div class="btns"><button type="button" class="primary" id="export">Скачать Excel</button><span id="export-msg" class="small muted"></span></div>
+    </div>
+    <div id="norm-warn" class="msg warn" hidden></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="two">
+      <div style="display:grid;gap:10px;min-width:0">
+        <h3>Группы жирных кислот, % от суммы ЖК</h3>
+        <div class="legend"><span><i class="sfa"></i>НЖК</span><span><i class="mufa"></i>МНЖК</span><span><i class="w6"></i>ω-6 ПНЖК</span><span><i class="w3"></i>ω-3 ПНЖК</span></div>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div style="display:grid;gap:10px;min-width:0">
+        <h3>Жирнокислотный состав купажа</h3>
+        <div class="scroll"><table><thead><tr><th>Кислота</th><th>Группа</th><th class="n">% от суммы ЖК</th></tr></thead><tbody id="fa-table"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <details class="panel" id="lib-panel">
+    <summary>Справочник масел</summary>
+    <p class="small muted">Составы – середины диапазонов стандартов Codex или данные конкретных исследований (источник указан для каждого масла). Для научной работы замените их результатами своей ГЖХ: изменения сохраняются в этом браузере.</p>
+    <div class="scroll"><table><thead><tr><th>Масло</th><th class="n">C18:1</th><th class="n">C18:2</th><th class="n">ω-3</th><th class="n">ω-6 : ω-3</th><th class="n">Сумма</th><th>Источник</th><th></th></tr></thead><tbody id="lib-table"></tbody></table></div>
+    <div class="btns"><button type="button" id="lib-new">+ Новое масло</button><button type="button" class="ghost" id="lib-reset">Восстановить исходный справочник</button></div>
+    <div id="reset-confirm" class="confirm" hidden>Все ваши изменения и добавленные масла будут удалены. <button type="button" id="reset-yes">Удалить изменения</button><button type="button" class="ghost" id="reset-no">Отмена</button></div>
+    <form id="editor" class="panel" style="background:var(--surface-2)" hidden>
+      <h3 id="ed-title">Редактирование масла</h3>
+      <div class="optgrid">
+        <label class="field"><span>Название</span><input type="text" id="ed-name" required></label>
+        <label class="field"><span>Источник данных</span><input type="text" id="ed-src"></label>
+      </div>
+      <div class="fagrid" id="ed-fa"></div>
+      <div class="btns"><span class="chip neutral" id="ed-sum"></span></div>
+      <div class="btns"><button type="submit" class="primary">Сохранить</button><button type="button" class="ghost" id="ed-cancel">Отмена</button><button type="button" class="ghost" id="ed-delete" hidden>Удалить масло</button></div>
+    </form>
+  </details>
+
+  <details class="panel">
+    <summary>Методика расчёта</summary>
+    <div class="prose">
+      <p>Содержание жирной кислоты <i>j</i> в купаже – взвешенная сумма по маслам-компонентам: F<sub>j</sub> = Σ x<sub>i</sub>·a<sub>ij</sub>, где x<sub>i</sub> – массовая доля масла, a<sub>ij</sub> – содержание кислоты в масле, % от суммы ЖК.</p>
+      <p>При оптимизации условие ω-6 : ω-3 = R приводится к линейному виду Σ x<sub>i</sub>(ω6<sub>i</sub> − R·ω3<sub>i</sub>) = 0, поэтому задача решается симплекс-методом (библиотека javascript-lp-solver). Минимум AI ищется бисекцией по уровню индекса.</p>
+      <div class="formula">AI = (C12:0 + 4·C14:0 + C16:0) / (Σω-3 + Σω-6 + ΣМНЖК)</div>
+      <div class="formula">TI = (C14:0 + C16:0 + C18:0) / (0,5·ΣМНЖК + 0,5·Σω-6 + 3·Σω-3 + Σω-3/Σω-6)</div>
+      <div class="formula">h/H = (C18:1 + C18:2 + C18:3 n-3) / (C12:0 + C14:0 + C16:0)</div>
+      <div class="formula">COX = (C18:1 + 10,3·C18:2 + 21,6·C18:3) / 100</div>
+      <div class="formula">IV = 0,95·C16:1 + 0,86·C18:1 + 1,732·C18:2 + 2,616·C18:3</div>
+      <p class="small muted">γ-линоленовая кислота (C18:3 n-6) учитывается в COX и йодном числе как C18:3. Ориентир ω-6 : ω-3 = 5–10 : 1 – по МР 2.3.1.0253-21 (норма для рациона).</p>
+      <h3>Источники</h3>
+      <ul class="small" id="src-list"></ul>
+    </div>
+  </details>
+  <p class="small muted">Модель расчёта купажей · версия 1.0 · Титов Е. Д.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/javascript-lp-solver@0.4.24/prod/solver.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Расчётное ядро калькулятора купажей (используется и в браузере, и в тестах node)
+(function (root) {
+  const FA = ["C6:0","C8:0","C10:0","C12:0","C14:0","C16:0","C16:1","C17:0","C17:1","C18:0","C18:1",
+    "C18:2","C18:3n3","C18:3n6","C20:0","C20:1","C20:2","C20:3n3","C22:0","C22:1","C22:2","C24:0","C24:1"];
+  const GROUP = {};
+  ["C6:0","C8:0","C10:0","C12:0","C14:0","C16:0","C17:0","C18:0","C20:0","C22:0","C24:0"].forEach(f => GROUP[f] = "sfa");
+  ["C16:1","C17:1","C18:1","C20:1","C22:1","C24:1"].forEach(f => GROUP[f] = "mufa");
+  ["C18:2","C18:3n6","C20:2","C22:2"].forEach(f => GROUP[f] = "w6");
+  ["C18:3n3","C20:3n3"].forEach(f => GROUP[f] = "w3");
+  // COX (Fatemi, Hammond 1980): триеновые C18 считаются как линоленат
+  const COXC = { "C18:1": 1, "C18:2": 10.3, "C18:3n3": 21.6, "C18:3n6": 21.6 };
+  // Расчётное йодное число (AOCS Cd 1c-85): C18:3 n-6 – как C18:3
+  const IVC = { "C16:1": 0.95, "C18:1": 0.86, "C18:2": 1.732, "C18:3n3": 2.616, "C18:3n6": 2.616 };
+
+  const g = (c, f) => +(c[f] || 0);
+
+  function blend(oils, shares) { // shares – доли (сумма 1)
+    const F = {};
+    FA.forEach(f => { F[f] = 0; });
+    oils.forEach((o, i) => FA.forEach(f => { F[f] += shares[i] * g(o.comp, f); }));
+    return F;
+  }
+  function sumGroup(F, grp) { return FA.filter(f => GROUP[f] === grp).reduce((a, f) => a + g(F, f), 0); }
+  function indices(F) {
+    const sfa = sumGroup(F, "sfa"), mufa = sumGroup(F, "mufa"), w6 = sumGroup(F, "w6"), w3 = sumGroup(F, "w3");
+    const pufa = w6 + w3;
+    const div = (a, b) => (b > 1e-12 ? a / b : null);
+    const ai = div(g(F, "C12:0") + 4 * g(F, "C14:0") + g(F, "C16:0"), w3 + w6 + mufa);
+    const tiDen = 0.5 * mufa + 0.5 * w6 + 3 * w3 + (w6 > 1e-12 ? w3 / w6 : 0);
+    const ti = div(g(F, "C14:0") + g(F, "C16:0") + g(F, "C18:0"), tiDen);
+    const hH = div(g(F, "C18:1") + g(F, "C18:2") + g(F, "C18:3n3"), g(F, "C12:0") + g(F, "C14:0") + g(F, "C16:0"));
+    const cox = Object.keys(COXC).reduce((a, f) => a + COXC[f] * g(F, f), 0) / 100;
+    const iv = Object.keys(IVC).reduce((a, f) => a + IVC[f] * g(F, f), 0);
+    return { sfa, mufa, pufa, w6, w3, ratio: div(w6, w3), ps: div(pufa, sfa), ai, ti, hH, cox, iv,
+      erucic: g(F, "C22:1"), total: FA.reduce((a, f) => a + g(F, f), 0) };
+  }
+  function oilCoef(o) { // линейные коэффициенты показателей одного масла
+    const F = {}; FA.forEach(f => { F[f] = g(o.comp, f); });
+    const sfa = sumGroup(F, "sfa"), mufa = sumGroup(F, "mufa"), w6 = sumGroup(F, "w6"), w3 = sumGroup(F, "w3");
+    return { sfa, mufa, w6, w3, pufa: w6 + w3, erucic: g(F, "C22:1"),
+      cox: Object.keys(COXC).reduce((a, f) => a + COXC[f] * g(F, f), 0) / 100,
+      aiNum: g(F, "C12:0") + 4 * g(F, "C14:0") + g(F, "C16:0"), aiDen: w3 + w6 + mufa };
+  }
+
+  // opt: {objective: 'cox'|'cost'|'ai', rMin, rMax, bounds:[[lo,hi]], prices:[], sfaMax, w3Min, erucicMax, psMin, aiMax}
+  function optimize(oils, opt, LP) {
+    const n = oils.length, K = oils.map(oilCoef);
+    const cons = { sum: { equal: 1 } };
+    const vars = {};
+    if (opt.rMax != null) cons.rhi = { max: 0 };
+    if (opt.rMin != null) cons.rlo = { min: 0 };
+    if (opt.sfaMax != null) cons.sfa = { max: opt.sfaMax };
+    if (opt.w3Min != null) cons.w3 = { min: opt.w3Min };
+    if (opt.erucicMax != null) cons.eru = { max: opt.erucicMax };
+    if (opt.psMin != null) cons.ps = { min: 0 };
+    if (opt.aiMax != null) cons.ai = { max: 0 };
+    for (let i = 0; i < n; i++) {
+      const k = K[i], v = { sum: 1 };
+      v["b" + i] = 1;
+      cons["b" + i] = { min: opt.bounds[i][0], max: opt.bounds[i][1] };
+      if (cons.rhi) v.rhi = k.w6 - opt.rMax * k.w3;
+      if (cons.rlo) v.rlo = k.w6 - opt.rMin * k.w3;
+      if (cons.sfa) v.sfa = k.sfa;
+      if (cons.w3) v.w3 = k.w3;
+      if (cons.eru) v.eru = k.erucic;
+      if (cons.ps) v.ps = k.pufa - opt.psMin * k.sfa;
+      if (cons.ai) v.ai = k.aiNum - opt.aiMax * k.aiDen;
+      v.obj = opt.objective === "cost" ? +opt.prices[i] : opt.objective === "ai" ? null : k.cox;
+      vars["x" + i] = v;
+    }
+    let model;
+    if (opt.objective === "ai") {
+      // Минимум AI – дробно-линейная задача: бисекция по уровню t (AI ≤ t выполнимо?)
+      let lo = 0, hi = Math.max(...K.map(k => (k.aiDen > 0 ? k.aiNum / k.aiDen : 0))) + 1e-6, best = null;
+      for (let it = 0; it < 60; it++) {
+        const t = (lo + hi) / 2;
+        const m = JSON.parse(JSON.stringify({ optimize: "obj", opType: "min", constraints: cons, variables: vars }));
+        m.constraints.aiT = { max: 0 };
+        for (let i = 0; i < n; i++) { m.variables["x" + i].aiT = K[i].aiNum - t * K[i].aiDen; m.variables["x" + i].obj = K[i].cox; }
+        const r = LP.Solve(m);
+        if (r.feasible) { hi = t; best = r; } else lo = t;
+      }
+      if (!best) return { feasible: false };
+      return { feasible: true, shares: oils.map((_, i) => +(best["x" + i] || 0)) };
+    }
+    model = { optimize: "obj", opType: "min", constraints: cons, variables: vars };
+    const r = LP.Solve(model);
+    if (!r.feasible) return { feasible: false };
+    return { feasible: true, shares: oils.map((_, i) => +(r["x" + i] || 0)) };
+  }
+
+  const api = { FA, GROUP, COXC, IVC, blend, indices, optimize, oilCoef, sumGroup };
+  if (typeof module !== "undefined") module.exports = api; else root.BlendEngine = api;
+})(this);
+
+</script>
+<script>
+const DEFAULT_LIB = {"fa":["C6:0","C8:0","C10:0","C12:0","C14:0","C16:0","C16:1","C17:0","C17:1","C18:0","C18:1","C18:2","C18:3n3","C18:3n6","C20:0","C20:1","C20:2","C20:3n3","C22:0","C22:1","C22:2","C24:0","C24:1"],"oils":[{"id":"sunflower","name":"Подсолнечное","comp":{"C12:0":0.05,"C14:0":0.1,"C16:0":6.22,"C16:1":0.15,"C17:0":0.1,"C17:1":0.05,"C18:0":4.54,"C18:1":26.37,"C18:2":60.4,"C18:3n3":0.15,"C20:0":0.3,"C20:1":0.15,"C22:0":0.89,"C22:1":0.15,"C22:2":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"sunflower_ho","name":"Подсолнечное высокоолеиновое","comp":{"C14:0":0.05,"C16:0":3.68,"C16:1":0.05,"C17:0":0.05,"C17:1":0.05,"C18:0":4.41,"C18:1":80.28,"C18:2":9.25,"C18:3n3":0.15,"C20:0":0.34,"C20:1":0.29,"C22:0":1.02,"C22:1":0.15,"C24:0":0.24},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"rapeseed","name":"Рапсовое (низкоэруковое)","comp":{"C14:0":0.1,"C16:0":4.55,"C16:1":0.29,"C17:0":0.14,"C17:1":0.14,"C18:0":1.82,"C18:1":57.89,"C18:2":21.53,"C18:3n3":9.09,"C20:0":0.67,"C20:1":2.11,"C20:2":0.05,"C22:0":0.29,"C22:1":0.96,"C22:2":0.05,"C24:0":0.14,"C24:1":0.19},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"soybean","name":"Соевое","comp":{"C12:0":0.05,"C14:0":0.1,"C16:0":10.65,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":3.67,"C18:1":23.28,"C18:2":53.0,"C18:3n3":7.68,"C20:0":0.35,"C20:1":0.25,"C20:2":0.05,"C22:0":0.35,"C22:1":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"maize","name":"Кукурузное","comp":{"C12:0":0.15,"C14:0":0.15,"C16:0":12.74,"C16:1":0.25,"C17:0":0.05,"C17:1":0.05,"C18:0":1.68,"C18:1":31.57,"C18:2":50.56,"C18:3n3":1.02,"C20:0":0.66,"C20:1":0.41,"C20:2":0.05,"C22:0":0.25,"C22:1":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"mustard","name":"Горчичное","comp":{"C14:0":0.51,"C16:0":2.53,"C16:1":0.25,"C18:0":1.26,"C18:1":15.68,"C18:2":17.2,"C18:3n3":12.14,"C20:0":0.76,"C20:1":9.1,"C20:2":0.51,"C22:0":1.37,"C22:1":36.42,"C22:2":0.51,"C24:0":0.25,"C24:1":1.52},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"cottonseed","name":"Хлопковое","comp":{"C12:0":0.1,"C14:0":0.8,"C16:0":23.89,"C16:1":0.6,"C17:0":0.05,"C17:1":0.05,"C18:0":2.7,"C18:1":18.19,"C18:2":52.42,"C18:3n3":0.2,"C20:0":0.35,"C20:1":0.05,"C20:2":0.05,"C22:0":0.3,"C22:1":0.15,"C22:2":0.05,"C24:0":0.05},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"peanut","name":"Арахисовое","comp":{"C12:0":0.05,"C14:0":0.05,"C16:0":10.87,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":2.72,"C18:1":51.38,"C18:2":27.17,"C18:3n3":0.15,"C20:0":1.48,"C20:1":1.19,"C22:0":2.96,"C22:1":0.15,"C24:0":1.48,"C24:1":0.15},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"sesame","name":"Кунжутное","comp":{"C14:0":0.05,"C16:0":9.87,"C16:1":0.15,"C17:0":0.1,"C17:1":0.05,"C18:0":5.41,"C18:1":38.79,"C18:2":44.35,"C18:3n3":0.35,"C20:0":0.45,"C20:1":0.15,"C22:0":0.15,"C24:0":0.15},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"safflower","name":"Сафлоровое","comp":{"C14:0":0.1,"C16:0":6.53,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":2.36,"C18:1":14.58,"C18:2":74.13,"C18:3n3":0.05,"C20:0":0.29,"C20:1":0.2,"C22:0":0.49,"C22:1":0.88,"C24:0":0.1,"C24:1":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"grapeseed","name":"Виноградных косточек","comp":{"C14:0":0.14,"C16:0":7.96,"C16:1":0.58,"C17:0":0.1,"C17:1":0.05,"C18:0":4.58,"C18:1":19.3,"C18:2":65.61,"C18:3n3":0.48,"C20:0":0.48,"C20:1":0.14,"C22:0":0.24,"C22:1":0.14,"C24:0":0.19},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"palm","name":"Пальмовое","comp":{"C12:0":0.25,"C14:0":1.23,"C16:0":42.72,"C16:1":0.3,"C17:0":0.1,"C18:0":4.68,"C18:1":39.37,"C18:2":10.33,"C18:3n3":0.25,"C20:0":0.49,"C20:1":0.2,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"palm_olein","name":"Пальмовый олеин","comp":{"C12:0":0.29,"C14:0":0.98,"C16:0":39.83,"C16:1":0.29,"C17:0":0.1,"C17:1":0.05,"C18:0":4.15,"C18:1":41.94,"C18:2":11.49,"C18:3n3":0.29,"C20:0":0.29,"C20:1":0.2,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"palm_kernel","name":"Пальмоядровое","comp":{"C6:0":0.39,"C8:0":4.17,"C10:0":3.69,"C12:0":48.54,"C14:0":15.53,"C16:0":8.01,"C16:1":0.1,"C18:0":1.94,"C18:1":15.05,"C18:2":2.18,"C18:3n3":0.1,"C20:0":0.1,"C20:1":0.1,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"coconut","name":"Кокосовое","comp":{"C6:0":0.34,"C8:0":7.05,"C10:0":6.27,"C12:0":47.44,"C14:0":18.24,"C16:0":8.54,"C18:0":2.9,"C18:1":7.24,"C18:2":1.69,"C18:3n3":0.1,"C20:0":0.1,"C20:1":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"olive","name":"Оливковое","comp":{"C14:0":0.05,"C16:0":13.47,"C16:1":1.86,"C17:0":0.24,"C17:1":0.29,"C18:0":2.69,"C18:1":67.61,"C18:2":12.0,"C18:3n3":0.73,"C20:0":0.39,"C22:0":0.15,"C24:0":0.49},"src":"Codex Stan 33-1981: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"linseed","name":"Льняное","comp":{"C16:0":5.55,"C18:0":4.35,"C18:1":20.95,"C18:2":14.1,"C18:3n3":55.05},"src":"OCL, 2016, 23(5), табл. 3: середины диапазонов","url":"https://www.ocl-journal.org/articles/ocl/full_html/2016/05/ocl160021-s/T3.html","cat":"Литература","note":""},{"id":"camelina","name":"Рыжиковое","comp":{"C16:0":9.53,"C18:0":3.46,"C18:1":17.04,"C18:2":19.78,"C18:3n3":33.28,"C20:0":0.41,"C20:1":13.61,"C20:2":1.61,"C20:3n3":0.24,"C22:1":1.07},"src":"Scientific Papers. Series A. Agronomy, 2021, 64(1), образец 7c/1","url":"https://agronomyjournal.usamv.ro/pdf/2021/issue_1/Art26.pdf","cat":"Литература","note":""},{"id":"chia","name":"Семян чиа","comp":{"C16:0":9.82,"C18:0":4.91,"C18:1":10.73,"C18:2":21.33,"C18:3n3":53.22},"src":"Панова А. С. и др. Растительные ресурсы, 2020, 56(4), с. 351–362","url":"https://sciencejournals.ru/issues/rastres/2020/vol_56/iss_4/RastRes2003006Panova/RastRes2003006Panova.pdf","cat":"Литература","note":""},{"id":"hemp","name":"Конопляное","comp":{"C16:0":7.06,"C18:0":3.06,"C18:1":15.68,"C18:2":57.04,"C20:0":0.81,"C18:3n6":2.02,"C18:3n3":13.84,"C20:1":0.5},"src":"OCL, 2023, 30, ocl230024, табл. 5 (семена сорта Futura 75)","url":"https://www.ocl-journal.org/articles/ocl/full_html/2023/01/ocl230024/T5.html","cat":"Литература","note":""},{"id":"walnut","name":"Грецкого ореха","comp":{"C16:0":7.1,"C16:1":0.22,"C18:0":1.7,"C18:1":20.02,"C18:2":60.3,"C18:3n3":10.44,"C20:0":0.06},"src":"Rabrenovic B. et al. Czech J. Food Sci., 2011, 29(1), 74–78: среднее 5 сортов, холодный отжим","url":"https://scidar.kg.ac.rs/bitstream/123456789/10063/1/10.17221-180-2010-cjfs.pdf","cat":"Литература","note":""},{"id":"ricebran","name":"Рисовых отрубей","comp":{"C14:0":0.2,"C16:0":18.6,"C18:0":1.4,"C18:1":43.5,"C18:2":32.7,"C18:3n3":0.8,"C20:0":0.4,"C22:0":0.1,"C24:0":0.3},"src":"OCL, 2021, 28, ocl210058, табл. 1","url":"https://www.ocl-journal.org/articles/ocl/full_html/2021/01/ocl210058/T1.html","cat":"Литература","note":""}]};
+const E = BlendEngine, FA = E.FA;
+const GROUP_RU = { sfa: "НЖК", mufa: "МНЖК", w6: "ω-6", w3: "ω-3" };
+const FA_LABEL = { "C18:3n3": "C18:3 n-3 (АЛК)", "C18:3n6": "C18:3 n-6 (ГЛК)", "C20:3n3": "C20:3 n-3", "C18:2": "C18:2 n-6", "C22:1": "C22:1 (эруковая)" };
+const KEY = "blendcalc.v1";
+const fmt = (v, d = 2) => (v == null || !isFinite(v)) ? "–" : v.toLocaleString("ru-RU", { minimumFractionDigits: d, maximumFractionDigits: d });
+const num = (s) => { if (s == null) return NaN; const t = String(s).replace(/\s/g, "").replace(",", "."); return t === "" ? NaN : Number(t); };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let state = {
+  mode: "manual",
+  rows: [
+    { id: "sunflower", share: 60, min: 40, max: 90, price: "" },
+    { id: "rapeseed", share: 35, min: 0, max: 40, price: "" },
+    { id: "chia", share: 5, min: 0, max: 15, price: "" },
+  ],
+  opt: { objective: "cox", rMin: 5, rMax: 10,
+    cons: { erucicMax: { on: true, v: 2 }, sfaMax: { on: false, v: 12 }, w3Min: { on: false, v: 5 }, psMin: { on: false, v: 4 }, aiMax: { on: false, v: 0.08 } } },
+  overrides: {}, custom: [], example: true,
+};
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.rows) state = Object.assign(state, s); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+function library() {
+  const base = DEFAULT_LIB.oils.map((o) => state.overrides[o.id] ? Object.assign({}, o, state.overrides[o.id], { edited: true }) : o);
+  return base.concat(state.custom.map((o) => Object.assign({ cat: "Мои масла", custom: true }, o)));
+}
+const oilById = (id) => library().find((o) => o.id === id);
+function groups(o) { const k = E.oilCoef(o); return k; }
+function ratioText(o) { const k = groups(o); return k.w3 > 1e-9 ? fmt(k.w6 / k.w3, 1) : "∞"; }
+
+const CONS = [
+  { key: "erucicMax", label: "Эруковая кислота C22:1 не более, %" },
+  { key: "sfaMax", label: "НЖК не более, %" },
+  { key: "w3Min", label: "ω-3 ПНЖК не менее, %" },
+  { key: "psMin", label: "ПНЖК / НЖК не менее" },
+  { key: "aiMax", label: "Индекс AI не более" },
+];
+
+// ---------- rendering
+function optionsHtml(selected, taken) {
+  const lib = library(); const cats = [...new Set(lib.map((o) => o.cat))];
+  const catName = { Codex: "Стандарт Codex", "Литература": "Данные исследований", "Мои масла": "Мои масла" };
+  return cats.map((c) => `<optgroup label="${esc(catName[c] || c)}">` + lib.filter((o) => o.cat === c)
+    .map((o) => `<option value="${o.id}" ${o.id === selected ? "selected" : ""} ${taken.has(o.id) && o.id !== selected ? "disabled" : ""}>${esc(o.name)}${o.edited ? " (изм.)" : ""}</option>`).join("") + "</optgroup>").join("");
+}
+function renderRows() {
+  const taken = new Set(state.rows.map((r) => r.id));
+  $("rows").innerHTML = state.rows.map((r, i) => {
+    const o = oilById(r.id);
+    return `<tr data-i="${i}">
+      <td><select class="oil" id="oil-${i}" aria-label="Масло ${i + 1}">${optionsHtml(r.id, taken)}</select></td>
+      <td class="n" data-label="Доля, %"><input type="text" inputmode="decimal" class="numin" id="share-${i}" data-f="share" value="${r.share === "" ? "" : fmt(+r.share, 2)}" aria-label="Доля, %"></td>
+      <td class="n mode-opt" data-label="Мин., %"><input type="text" inputmode="decimal" class="numin" id="min-${i}" data-f="min" value="${fmt(+r.min, 1)}" aria-label="Мин., %"></td>
+      <td class="n mode-opt" data-label="Макс., %"><input type="text" inputmode="decimal" class="numin" id="max-${i}" data-f="max" value="${fmt(+r.max, 1)}" aria-label="Макс., %"></td>
+      <td class="n" data-label="Цена, руб./кг"><input type="text" inputmode="decimal" class="numin" id="price-${i}" data-f="price" value="${r.price === "" || r.price == null ? "" : fmt(+r.price, 0)}" placeholder="–" aria-label="Цена, руб./кг"></td>
+      <td class="n num" data-label="ω-6 : ω-3 масла">${o ? ratioText(o) : "–"}</td>
+      <td class="n del"><button type="button" class="icon" data-del="${i}" aria-label="Удалить масло" title="Удалить" ${state.rows.length <= 1 ? "disabled" : ""}>×</button></td></tr>`;
+  }).join("");
+  $("example-note").hidden = !state.example;
+}
+function currentBlend() {
+  const rows = state.rows.filter((r) => oilById(r.id));
+  const oils = rows.map((r) => oilById(r.id));
+  const shares = rows.map((r) => Math.max(0, num(r.share) || 0));
+  const total = shares.reduce((a, b) => a + b, 0);
+  return { rows, oils, shares, total };
+}
+function tile(label, value, hint, cls = "", chip = "") {
+  return `<div class="tile ${cls}"><span class="lab">${label}</span><span class="val">${value}</span>${chip}${hint ? `<span class="hint">${hint}</span>` : ""}</div>`;
+}
+function renderResults() {
+  const { rows, oils, shares, total } = currentBlend();
+  const sumOk = Math.abs(total - 100) < 0.05;
+  $("sum-chip").innerHTML = `<span class="chip ${sumOk ? "good" : "warn"}">Сумма долей: ${fmt(total, 2)} %</span>`;
+  const nw = $("norm-warn");
+  if (total <= 0) { nw.hidden = false; nw.textContent = "Введите доли масел, чтобы рассчитать купаж."; $("tiles").innerHTML = ""; $("bars").innerHTML = ""; $("fa-table").innerHTML = ""; return null; }
+  nw.hidden = sumOk; if (!sumOk) nw.textContent = `Сумма долей ${fmt(total, 2)} % вместо 100 %: показатели рассчитаны для долей, пропорционально приведённых к 100 %.`;
+  const x = shares.map((s) => s / total);
+  const F = E.blend(oils, x), I = E.indices(F);
+  let rchip = "";
+  if (I.ratio == null) rchip = `<span class="chip bad">нет ω-3</span>`;
+  else if (I.ratio >= 4.995 && I.ratio <= 10.005) rchip = `<span class="chip good">в диапазоне 5–10</span>`;
+  else rchip = `<span class="chip warn">${I.ratio > 10 ? "выше" : "ниже"} 5–10 : 1</span>`;
+  const prices = rows.map((r) => num(r.price));
+  const cost = prices.every((p) => isFinite(p)) ? x.reduce((a, xi, i) => a + xi * prices[i], 0) : null;
+  $("tiles").innerHTML = [
+    tile("ω-6 : ω-3", I.ratio == null ? "∞" : fmt(I.ratio, 1) + " : 1", "ориентир МР 2.3.1.0253-21", "key", rchip),
+    tile("Окисляемость COX", fmt(I.cox, 2), "ниже – стабильнее", "key"),
+    tile("Индекс атерогенности AI", fmt(I.ai, 3), "ниже – лучше"),
+    tile("Индекс тромбогенности TI", fmt(I.ti, 3), "ниже – лучше"),
+    tile("h/H", fmt(I.hH, 1), "выше – лучше"),
+    tile("ПНЖК / НЖК", fmt(I.ps, 2), "выше – лучше"),
+    tile("Йодное число (расч.)", fmt(I.iv, 1), "г I₂ / 100 г"),
+    tile("Стоимость 1 кг", cost == null ? "–" : fmt(cost, 2) + " ₽", cost == null ? "введите цены всех масел" : "по ценам компонентов"),
+  ].join("");
+  const barRow = (name, o, cls) => {
+    const k = cls ? { sfa: I.sfa, mufa: I.mufa, w6: I.w6, w3: I.w3 } : E.oilCoef(o);
+    const t = k.sfa + k.mufa + k.w6 + k.w3 || 1;
+    const seg = (key, v) => { const w = v / t * 100; return `<span class="${key}" style="width:${w}%" title="${GROUP_RU[key]}: ${fmt(v, 1)} %">${w > 9 ? fmt(v, 0) : ""}</span>`; };
+    return `<div class="barrow ${cls}"><span class="name" title="${esc(name)}">${esc(name)}</span><div class="bar">${seg("sfa", k.sfa)}${seg("mufa", k.mufa)}${seg("w6", k.w6)}${seg("w3", k.w3)}</div></div>`;
+  };
+  $("bars").innerHTML = barRow("Купаж", null, "total") + oils.map((o, i) => barRow(`${o.name} · ${fmt(x[i] * 100, 1)} %`, o, "")).join("");
+  const dotc = { sfa: "var(--c-sfa)", mufa: "var(--c-mufa)", w6: "var(--c-w6)", w3: "var(--c-w3)" };
+  $("fa-table").innerHTML = FA.filter((f) => F[f] > 0.0005).map((f) => `<tr><td>${FA_LABEL[f] || f}</td><td class="grp"><span class="dot" style="background:${dotc[E.GROUP[f]]}"></span>${GROUP_RU[E.GROUP[f]]}</td><td class="n">${fmt(F[f], 2)}</td></tr>`).join("")
+    + `<tr class="sum"><td>НЖК</td><td></td><td class="n">${fmt(I.sfa, 2)}</td></tr><tr class="sum"><td>МНЖК</td><td></td><td class="n">${fmt(I.mufa, 2)}</td></tr><tr class="sum"><td>ПНЖК (ω-6 ${fmt(I.w6, 2)} + ω-3 ${fmt(I.w3, 2)})</td><td></td><td class="n">${fmt(I.pufa, 2)}</td></tr><tr class="sum"><td>Сумма идентифицированных</td><td></td><td class="n">${fmt(I.total, 2)}</td></tr>`;
+  return { rows, oils, x, F, I, cost };
+}
+function renderOptControls() {
+  $("objective").value = state.opt.objective;
+  $("r-min").value = fmt(state.opt.rMin, 1); $("r-max").value = fmt(state.opt.rMax, 1);
+  $("cons").innerHTML = CONS.map((c) => { const s = state.opt.cons[c.key];
+    return `<label><input type="checkbox" id="c-${c.key}" ${s.on ? "checked" : ""}> ${c.label} <input type="text" inputmode="decimal" class="numin" id="v-${c.key}" value="${fmt(s.v, c.key === "aiMax" ? 3 : 1)}" aria-label="${c.label}"></label>`; }).join("");
+}
+function renderMode() {
+  document.body.classList.toggle("opt", state.mode === "opt");
+  $("mode-manual").setAttribute("aria-pressed", state.mode === "manual"); $("mode-opt").setAttribute("aria-pressed", state.mode === "opt");
+}
+function renderLibrary() {
+  $("lib-table").innerHTML = library().map((o) => { const k = E.oilCoef(o); const sum = FA.reduce((a, f) => a + (+o.comp[f] || 0), 0);
+    return `<tr><td>${esc(o.name)}${o.edited ? ' <span class="chip neutral">изменено</span>' : ""}${o.custom ? ' <span class="chip neutral">моё</span>' : ""}</td><td class="n">${fmt(+o.comp["C18:1"] || 0, 1)}</td><td class="n">${fmt(+o.comp["C18:2"] || 0, 1)}</td><td class="n">${fmt(k.w3, 1)}</td><td class="n">${ratioText(o)}</td><td class="n">${fmt(sum, 1)}</td><td class="small">${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.src)}</a>` : esc(o.src || "–")}</td><td><button type="button" class="ghost" data-edit="${o.id}">Изменить</button></td></tr>`; }).join("");
+  const srcs = [...new Map(DEFAULT_LIB.oils.map((o) => [o.url, o])).values()];
+  $("src-list").innerHTML = srcs.map((o) => `<li><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.src)}</a></li>`).join("")
+    + `<li>МР 2.3.1.0253-21. Нормы физиологических потребностей в энергии и пищевых веществах (ω-6 : ω-3 = 5–10 : 1)</li><li>Ulbricht T. L. V., Southgate D. A. T. The Lancet, 1991, 338, 985–992 (AI, TI)</li><li>Fatemi S. H., Hammond E. G. Lipids, 1980, 15, 379–385 (COX)</li><li>AOCS Cd 1c-85; ISO 3961:2024, прил. B (расчётное йодное число)</li>`;
+}
+function renderAll() { renderMode(); renderRows(); renderOptControls(); renderLibrary(); renderResults(); }
+
+// ---------- events
+$("mode-manual").onclick = () => { state.mode = "manual"; save(); renderMode(); };
+$("mode-opt").onclick = () => { state.mode = "opt"; save(); renderMode(); };
+$("rows").addEventListener("change", (e) => {
+  const tr = e.target.closest("tr"); if (!tr) return; const i = +tr.dataset.i;
+  if (e.target.classList.contains("oil")) { state.rows[i].id = e.target.value; state.example = false; save(); renderRows(); renderResults(); }
+});
+$("rows").addEventListener("input", (e) => {
+  const f = e.target.dataset.f; if (!f) return; const i = +e.target.closest("tr").dataset.i;
+  const v = e.target.value.trim(); const n = num(v);
+  e.target.classList.toggle("bad", v !== "" && !isFinite(n));
+  state.rows[i][f] = v === "" ? "" : (isFinite(n) ? n : state.rows[i][f]); state.example = false; save(); renderResults();
+});
+$("rows").addEventListener("click", (e) => { const b = e.target.closest("[data-del]"); if (!b) return; state.rows.splice(+b.dataset.del, 1); save(); renderRows(); renderResults(); });
+$("add-row").onclick = () => { const used = new Set(state.rows.map((r) => r.id)); const o = library().find((o) => !used.has(o.id)); if (!o) return;
+  state.rows.push({ id: o.id, share: 0, min: 0, max: 100, price: "" }); state.example = false; save(); renderRows(); renderResults(); $("oil-" + (state.rows.length - 1)).focus(); };
+$("normalize").onclick = () => { const t = state.rows.reduce((a, r) => a + (num(r.share) || 0), 0); if (t <= 0) return; state.rows.forEach((r) => { r.share = (num(r.share) || 0) * 100 / t; }); save(); renderRows(); renderResults(); };
+$("objective").onchange = (e) => { state.opt.objective = e.target.value; save(); };
+$("r-min").oninput = (e) => { const n = num(e.target.value); if (isFinite(n)) { state.opt.rMin = n; save(); } };
+$("r-max").oninput = (e) => { const n = num(e.target.value); if (isFinite(n)) { state.opt.rMax = n; save(); } };
+$("cons").addEventListener("input", (e) => { const id = e.target.id; const key = id.slice(2);
+  if (id.startsWith("c-")) state.opt.cons[key].on = e.target.checked; else { const n = num(e.target.value); if (isFinite(n)) state.opt.cons[key].v = n; } save(); });
+
+function showMsg(cls, html) { const m = $("opt-msg"); m.className = "msg " + cls; m.innerHTML = html; m.hidden = false; }
+$("run-opt").onclick = () => {
+  if (typeof window.solver === "undefined") { showMsg("bad", "Не загрузилась библиотека решателя. Проверьте подключение к интернету и обновите страницу."); return; }
+  const rows = state.rows.filter((r) => oilById(r.id)); const oils = rows.map((r) => oilById(r.id));
+  const bounds = rows.map((r) => [Math.max(0, num(r.min) || 0) / 100, Math.min(100, isFinite(num(r.max)) ? num(r.max) : 100) / 100]);
+  if (bounds.some(([a, b]) => a > b)) { showMsg("bad", "У одного из масел минимальная доля больше максимальной. Исправьте границы."); return; }
+  const rMin = state.opt.rMin, rMax = state.opt.rMax;
+  if (!(rMin > 0 && rMax >= rMin)) { showMsg("bad", "Задайте соотношение ω-6 : ω-3 так, чтобы «от» было больше нуля и не больше «до»."); return; }
+  const prices = rows.map((r) => num(r.price));
+  if (state.opt.objective === "cost" && !prices.every((p) => isFinite(p))) { showMsg("bad", "Для подбора по стоимости введите цены всех масел в столбце «Цена»."); return; }
+  const opt = { objective: state.opt.objective, rMin, rMax, bounds, prices };
+  CONS.forEach((c) => { const s = state.opt.cons[c.key]; if (s.on) opt[c.key] = s.v; });
+  const r = E.optimize(oils, opt, window.solver);
+  if (!r.feasible) {
+    const ks = oils.map((o) => `${esc(o.name)} – ${ratioText(o)}`).join("; ");
+    showMsg("bad", `Рецептура с такими ограничениями не существует. Расширьте границы долей, диапазон ω-6 : ω-3 или снимите часть ограничений. Соотношение ω-6 : ω-3 в выбранных маслах: ${ks}.`); return;
+  }
+  rows.forEach((row, i) => { row.share = r.shares[i] * 100; });
+  state.example = false; save(); renderRows(); const res = renderResults();
+  const goal = { cox: `COX = ${fmt(res.I.cox, 2)}`, cost: `стоимость ${fmt(res.cost, 2)} ₽/кг`, ai: `AI = ${fmt(res.I.ai, 3)}` }[state.opt.objective];
+  showMsg("good", `Оптимальная рецептура найдена: ${goal}, ω-6 : ω-3 = ${fmt(res.I.ratio, 2)} : 1. Доли подставлены в таблицу.`);
+};
+
+// ---------- Excel export
+function colName(n) { let s = ""; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
+function buildWorkbook(res) {
+  const { rows, oils, x, F, I, cost } = res; const n = oils.length, last = n + 1;
+  const wb = XLSX.utils.book_new();
+  // Рецептура
+  const rec = [["Масло", "Доля, %", "Доля, доли ед.", "Мин., %", "Макс., %", "Цена, руб./кг", "Источник данных"]];
+  rows.forEach((r, i) => rec.push([oils[i].name, x[i] * 100, null, num(r.min), num(r.max), isFinite(num(r.price)) ? num(r.price) : null, oils[i].src || ""]));
+  rec.push(["Сумма", null, null]);
+  const ws1 = XLSX.utils.aoa_to_sheet(rec);
+  for (let i = 0; i < n; i++) ws1["C" + (i + 2)] = { t: "n", v: x[i], f: `B${i + 2}/SUM($B$2:$B$${last})` };
+  ws1["B" + (n + 2)] = { t: "n", v: x.reduce((a, b) => a + b, 0) * 100, f: `SUM(B2:B${last})` };
+  ws1["C" + (n + 2)] = { t: "n", v: 1, f: `SUM(C2:C${last})` };
+  ws1["!cols"] = [{ wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 9 }, { wch: 9 }, { wch: 13 }, { wch: 70 }];
+  // Масла
+  const ws2 = XLSX.utils.aoa_to_sheet([["Масло"].concat(FA)].concat(oils.map((o) => [o.name].concat(FA.map((f) => +o.comp[f] || 0)))));
+  ws2["!cols"] = [{ wch: 30 }].concat(FA.map(() => ({ wch: 8 })));
+  // ЖК_состав
+  const comp = [["Кислота", "Группа", "Купаж, % от суммы ЖК"]];
+  FA.forEach((f) => comp.push([f, GROUP_RU[E.GROUP[f]], F[f]]));
+  const ws3 = XLSX.utils.aoa_to_sheet(comp);
+  FA.forEach((f, j) => { const c = colName(j + 1); ws3["C" + (j + 2)] = { t: "n", v: F[f], f: `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Масла'!${c}$2:${c}$${last})` }; });
+  const lastFa = FA.length + 1;
+  const row = (f) => "'ЖК_состав'!C" + (FA.indexOf(f) + 2);
+  const sumif = (g) => `SUMIF('ЖК_состав'!$B$2:$B$${lastFa},"${g}",'ЖК_состав'!$C$2:$C$${lastFa})`;
+  ws3["!cols"] = [{ wch: 12 }, { wch: 9 }, { wch: 22 }];
+  // Показатели
+  const P = [["Показатель", "Значение", "Комментарий"],
+    ["НЖК, %", I.sfa, ""], ["МНЖК, %", I.mufa, ""], ["ω-6 ПНЖК, %", I.w6, ""], ["ω-3 ПНЖК, %", I.w3, ""], ["ПНЖК, %", I.pufa, ""],
+    ["ω-6 : ω-3", I.ratio, "ориентир 5–10 : 1 (МР 2.3.1.0253-21)"], ["ПНЖК / НЖК", I.ps, "выше – лучше"],
+    ["Индекс атерогенности AI", I.ai, "ниже – лучше (Ulbricht, Southgate, 1991)"], ["Индекс тромбогенности TI", I.ti, "ниже – лучше"],
+    ["h/H", I.hH, "выше – лучше"], ["Расчётная окисляемость COX", I.cox, "ниже – стабильнее (Fatemi, Hammond, 1980)"],
+    ["Йодное число расчётное, г I2/100 г", I.iv, "AOCS Cd 1c-85"], ["Эруковая кислота C22:1, %", I.erucic, ""],
+    ["Стоимость 1 кг, руб.", cost, cost == null ? "цены заданы не для всех масел" : ""]];
+  const ws4 = XLSX.utils.aoa_to_sheet(P);
+  const fm = {
+    B2: sumif("НЖК"), B3: sumif("МНЖК"), B4: sumif("ω-6"), B5: sumif("ω-3"), B6: "B4+B5", B7: "IF(B5>0,B4/B5,\"–\")", B8: "B6/B2",
+    B9: `(${row("C12:0")}+4*${row("C14:0")}+${row("C16:0")})/(B5+B4+B3)`,
+    B10: `(${row("C14:0")}+${row("C16:0")}+${row("C18:0")})/(0.5*B3+0.5*B4+3*B5+IF(B4>0,B5/B4,0))`,
+    B11: `(${row("C18:1")}+${row("C18:2")}+${row("C18:3n3")})/(${row("C12:0")}+${row("C14:0")}+${row("C16:0")})`,
+    B12: `(${row("C18:1")}+10.3*${row("C18:2")}+21.6*(${row("C18:3n3")}+${row("C18:3n6")}))/100`,
+    B13: `0.95*${row("C16:1")}+0.86*${row("C18:1")}+1.732*${row("C18:2")}+2.616*(${row("C18:3n3")}+${row("C18:3n6")})`,
+    B14: row("C22:1"),
+  };
+  Object.entries(fm).forEach(([a, f]) => { const v = ws4[a] ? ws4[a].v : null; ws4[a] = { t: typeof v === "number" ? "n" : "s", v: v == null ? "" : v, f }; });
+  if (cost != null) ws4.B15 = { t: "n", v: cost, f: `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Рецептура'!$F$2:$F$${last})` };
+  ws4["!cols"] = [{ wch: 36 }, { wch: 12 }, { wch: 46 }];
+  // Параметры
+  const par = [["Параметр", "Значение"], ["Дата расчёта", new Date().toLocaleDateString("ru-RU")],
+    ["Режим", state.mode === "opt" ? "Оптимизация (симплекс-метод, javascript-lp-solver)" : "Ручной расчёт"]];
+  if (state.mode === "opt") {
+    par.push(["Цель", $("objective").selectedOptions[0].textContent], ["ω-6 : ω-3", `от ${fmt(state.opt.rMin, 1)} до ${fmt(state.opt.rMax, 1)} : 1`]);
+    CONS.forEach((c) => { const s = state.opt.cons[c.key]; if (s.on) par.push([c.label, s.v]); });
+  }
+  par.push(["Модель", "Массовый баланс ЖК: F_j = Σ x_i·a_ij; ω-6 : ω-3 линеаризовано как Σ x_i(ω6_i − R·ω3_i)"],
+    ["Примечание", "Синие исходные данные можно менять: формулы на листах ЖК_состав и Показатели пересчитаются"]);
+  oils.forEach((o) => par.push(["Источник: " + o.name, (o.src || "") + (o.url ? " – " + o.url : "")]));
+  const ws5 = XLSX.utils.aoa_to_sheet(par); ws5["!cols"] = [{ wch: 36 }, { wch: 110 }];
+  [[ws1, "Рецептура"], [ws2, "Масла"], [ws3, "ЖК_состав"], [ws4, "Показатели"], [ws5, "Параметры"]].forEach(([w, nm]) => XLSX.utils.book_append_sheet(wb, w, nm));
+  return wb;
+}
+let downloadsNs;
+if (window.claude && typeof window.claude.use === "function") { window.claude.use("downloads").then((d) => { downloadsNs = d; }).catch(() => {}); }
+$("export").onclick = async () => {
+  const msg = $("export-msg"); msg.textContent = "";
+  if (typeof XLSX === "undefined") { msg.textContent = "Не загрузилась библиотека Excel. Проверьте интернет и обновите страницу."; return; }
+  const res = renderResults(); if (!res) { msg.textContent = "Сначала задайте доли масел."; return; }
+  const wb = buildWorkbook(res);
+  const filename = `kupazh_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  if (downloadsNs) {
+    try { const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      await downloadsNs.save({ filename, data: new Blob([buf]) }); msg.textContent = "Файл сохранён."; }
+    catch (e) { msg.textContent = e && e.code === "declined" ? "Сохранение отменено." : "Не удалось сохранить файл в этом окне."; }
+    return;
+  }
+  try { XLSX.writeFile(wb, filename); msg.textContent = "Файл скачан."; } catch (e) { msg.textContent = "Браузер не разрешил скачивание."; }
+};
+
+// ---------- library editor
+let editing = null;
+function openEditor(id) {
+  const o = id ? oilById(id) : { id: null, name: "", src: "", comp: {} };
+  editing = id; $("editor").hidden = false; $("ed-title").textContent = id ? "Изменить состав масла" : "Новое масло";
+  $("ed-name").value = o.name; $("ed-src").value = o.src || "";
+  $("ed-fa").innerHTML = FA.map((f, j) => `<label for="ed-f${j}">${FA_LABEL[f] || f}<input type="text" inputmode="decimal" class="numin" id="ed-f${j}" value="${o.comp[f] ? fmt(+o.comp[f], 2) : ""}" placeholder="0"></label>`).join("");
+  $("ed-delete").hidden = !(id && (o.custom || o.edited)); $("ed-delete").textContent = o.custom ? "Удалить масло" : "Вернуть исходный состав";
+  updEdSum(); $("ed-name").focus();
+}
+function edComp() { const c = {}; FA.forEach((f, j) => { const n = num($("ed-f" + j).value); if (isFinite(n) && n > 0) c[f] = n; }); return c; }
+function updEdSum() { const s = Object.values(edComp()).reduce((a, b) => a + b, 0); const el = $("ed-sum"); el.textContent = `Сумма: ${fmt(s, 2)} %`; el.className = "chip " + (Math.abs(s - 100) < 1 ? "good" : "warn"); }
+$("ed-fa").addEventListener("input", updEdSum);
+$("lib-table").addEventListener("click", (e) => { const b = e.target.closest("[data-edit]"); if (b) openEditor(b.dataset.edit); });
+$("lib-new").onclick = () => openEditor(null);
+$("ed-cancel").onclick = () => { $("editor").hidden = true; editing = null; };
+$("ed-delete").onclick = () => {
+  const o = oilById(editing); if (!o) return;
+  if (o.custom) { state.custom = state.custom.filter((c) => c.id !== editing); state.rows = state.rows.filter((r) => r.id !== editing); if (!state.rows.length) state.rows.push({ id: "sunflower", share: 100, min: 0, max: 100, price: "" }); }
+  else delete state.overrides[editing];
+  $("editor").hidden = true; editing = null; save(); renderAll();
+};
+$("editor").addEventListener("submit", (e) => {
+  e.preventDefault(); const name = $("ed-name").value.trim(); if (!name) { $("ed-name").focus(); return; }
+  const rec = { name, src: $("ed-src").value.trim() || "Пользовательские данные", comp: edComp(), url: "" };
+  if (editing && DEFAULT_LIB.oils.some((o) => o.id === editing)) state.overrides[editing] = rec;
+  else if (editing) { const c = state.custom.find((c) => c.id === editing); Object.assign(c, rec); }
+  else state.custom.push(Object.assign({ id: "my_" + Date.now() }, rec));
+  $("editor").hidden = true; editing = null; save(); renderAll();
+});
+$("lib-reset").onclick = () => { $("reset-confirm").hidden = false; };
+$("reset-no").onclick = () => { $("reset-confirm").hidden = true; };
+$("reset-yes").onclick = () => { state.overrides = {}; state.custom = []; state.rows = state.rows.filter((r) => DEFAULT_LIB.oils.some((o) => o.id === r.id));
+  if (!state.rows.length) state.rows.push({ id: "sunflower", share: 100, min: 0, max: 100, price: "" }); $("reset-confirm").hidden = true; save(); renderAll(); };
+
+renderAll();
+</script>
+
+</body>
+</html>
