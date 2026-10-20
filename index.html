@@ -49,7 +49,7 @@
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
-.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
 h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 800; }
 h2 { font-size: 20px; font-weight: 700; }
@@ -64,7 +64,7 @@ header.top { padding-top: 28px; display: grid; gap: 10px; }
 .eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
 header.top p { max-width: 68ch; color: var(--muted); }
 
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .panel-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; justify-content: space-between; }
 
 .scroll { overflow-x: auto; min-width: 0; }
@@ -148,7 +148,7 @@ details.panel[open] > summary::after { content: "–"; }
 @media (max-width: 640px) {
   #rows-table thead { display: none; }
   #rows-table, #rows-table tbody { display: block; }
-  #rows-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  #rows-table tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
   #rows-table td { display: block; border: 0; padding: 0; text-align: left; }
   #rows-table td:first-child { grid-column: 1 / -1; }
   body:not(.opt) #rows-table td.mode-opt { display: none; }
@@ -158,16 +158,37 @@ details.panel[open] > summary::after { content: "–"; }
   #rows-table td.del { grid-column: 1 / -1; text-align: right; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+[hidden] { display: none !important; }
 </style>
 </head>
 <body>
 
+<style>
+.task { display: grid; gap: 16px; border-top: 1px solid var(--line); padding-top: 16px; }
+.task-block { display: grid; gap: 8px; }
+.task-block > .seg { justify-self: start; }
+.task-block > h3 { display: flex; gap: 10px; align-items: baseline; }
+.task-block > h3 .step { font-family: var(--f-mono); font-size: 12px; color: var(--gold); font-weight: 500; }
+.goal-row, .con-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.goal-row select, .con-row select { max-width: 100%; }
+select.ind { min-width: 0; width: min(100%, 380px); }
+body:not(.opt) .mode-opt { display: none !important; }
+.goal-row > *, .con-row > * { min-width: 0; }
+.cons-list { display: grid; gap: 8px; }
+.allowed { display: flex; flex-wrap: wrap; gap: 6px; }
+.allowed label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px 3px 8px; font-size: 13px; cursor: pointer; background: var(--surface); }
+.allowed label:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); }
+.allowed .nod { color: var(--muted); font-size: 11px; }
+.tocgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.tocgrid label { display: grid; gap: 2px; font-size: 12.5px; color: var(--muted); }
+.tocgrid input { width: 100%; }
+</style>
 
 <div class="wrap">
   <header class="top">
-    <div class="eyebrow">ω-6 : ω-3 · AI · TI · h/H · COX · йодное число</div>
+    <div class="eyebrow">ω-6 : ω-3 · витамин Е · AI · TI · h/H · COX · йодное число</div>
     <h1>Калькулятор купажа растительных масел</h1>
-    <p>Выберите масла, задайте доли или поручите подбор рецептуры симплекс-методу. Состав купажа считается по массовому балансу жирных кислот; результаты можно выгрузить в Excel с формулами.</p>
+    <p>Выберите масла и задайте доли или сформулируйте задачу оптимизации: что максимизировать, минимизировать или довести до нужного значения, какие ограничения соблюсти и сколько масел взять. Расчёт ведётся по массовому балансу жирных кислот и токоферолов; результаты выгружаются в Excel с формулами.</p>
   </header>
 
   <section class="panel" aria-labelledby="h-comp">
@@ -195,23 +216,53 @@ details.panel[open] > summary::after { content: "–"; }
       <span id="sum-chip"></span>
     </div>
 
-    <div class="mode-opt" style="gap:14px">
-      <h3>Подбор рецептуры</h3>
-      <div class="optgrid">
-        <label class="field"><span>Цель</span>
-          <select id="objective">
-            <option value="cox">Минимум окисляемости COX</option>
-            <option value="cost">Минимум стоимости</option>
-            <option value="ai">Минимум индекса атерогенности AI</option>
+    <div class="task mode-opt" id="task">
+      <h2>Задача оптимизации</h2>
+
+      <div class="task-block">
+        <h3><span class="step">1</span>Функция цели</h3>
+        <div class="goal-row">
+          <select id="goal-sense" aria-label="Направление">
+            <option value="min">Минимизировать</option>
+            <option value="max">Максимизировать</option>
+            <option value="target">Приблизить к значению</option>
           </select>
-        </label>
-        <div class="field"><span>Соотношение ω-6 : ω-3 в купаже</span>
-          <div class="inline">от <input type="text" inputmode="decimal" class="numin" id="r-min" aria-label="ω-6 : ω-3 от"> до <input type="text" inputmode="decimal" class="numin" id="r-max" aria-label="ω-6 : ω-3 до"> : 1</div>
+          <select class="ind" id="goal-ind" aria-label="Показатель цели"></select>
+          <span id="goal-val-wrap"><input type="text" inputmode="decimal" class="numin" id="goal-val" aria-label="Целевое значение"> <span class="small muted" id="goal-unit"></span></span>
+        </div>
+        <p class="small muted" id="goal-hint"></p>
+      </div>
+
+      <div class="task-block">
+        <h3><span class="step">2</span>Ограничения</h3>
+        <div class="cons-list" id="cons"></div>
+        <div class="btns"><button type="button" id="add-con">+ Добавить ограничение</button></div>
+      </div>
+
+      <div class="task-block">
+        <h3><span class="step">3</span>Масла для подбора</h3>
+        <div class="seg" role="group" aria-label="Источник масел">
+          <button type="button" id="pool-rows" aria-pressed="true">Только из таблицы</button>
+          <button type="button" id="pool-lib" aria-pressed="false">Из справочника</button>
+        </div>
+        <div id="pool-lib-box" hidden style="display:grid;gap:8px">
+          <p class="small muted">Отметьте масла, из которых можно составлять купаж. Границы долей масел из таблицы берутся из столбцов «Мин.» и «Макс.», для остальных – из поля ниже.</p>
+          <div class="allowed" id="allowed"></div>
+          <div class="btns"><button type="button" class="ghost" id="allow-all">Отметить все</button><button type="button" class="ghost" id="allow-liquid">Только жидкие масла</button>
+            <label class="inline small">Макс. доля масла не из таблицы, % <input type="text" inputmode="decimal" class="numin" id="max-any"></label></div>
         </div>
       </div>
-      <div class="cons optgrid" id="cons"></div>
+
+      <div class="task-block">
+        <h3><span class="step">4</span>Число масел в купаже</h3>
+        <div class="goal-row">
+          <label class="inline"><input type="checkbox" id="count-on"> Ограничить: от <input type="text" inputmode="numeric" class="numin" id="count-min" aria-label="Число масел от"> до <input type="text" inputmode="numeric" class="numin" id="count-max" aria-label="Число масел до"></label>
+          <label class="inline small">Мин. доля включённого масла, % <input type="text" inputmode="decimal" class="numin" id="min-use"></label>
+        </div>
+      </div>
+
       <div class="btns"><button type="button" class="primary" id="run-opt">Подобрать рецептуру</button>
-        <span class="small muted">Границы долей каждого масла задаются в столбцах «Мин.» и «Макс.».</span></div>
+        <span class="small muted">При равных значениях цели выбирается рецептура с наименьшей окисляемостью COX.</span></div>
       <div id="opt-msg" class="msg" hidden></div>
     </div>
   </section>
@@ -238,18 +289,22 @@ details.panel[open] > summary::after { content: "–"; }
 
   <details class="panel" id="lib-panel">
     <summary>Справочник масел</summary>
-    <p class="small muted">Составы – середины диапазонов стандартов Codex или данные конкретных исследований (источник указан для каждого масла). Для научной работы замените их результатами своей ГЖХ: изменения сохраняются в этом браузере.</p>
-    <div class="scroll"><table><thead><tr><th>Масло</th><th class="n">C18:1</th><th class="n">C18:2</th><th class="n">ω-3</th><th class="n">ω-6 : ω-3</th><th class="n">Сумма</th><th>Источник</th><th></th></tr></thead><tbody id="lib-table"></tbody></table></div>
+    <p class="small muted">Жирнокислотные составы – середины диапазонов стандартов Codex или данные конкретных исследований; токоферолы – данные исследований рафинированных и нерафинированных масел. Источник указан для каждого масла. Для научной работы замените их результатами своих анализов: изменения сохраняются в этом браузере.</p>
+    <div class="scroll"><table><thead><tr><th>Масло</th><th class="n">C18:1</th><th class="n">C18:2</th><th class="n">ω-3</th><th class="n">ω-6 : ω-3</th><th class="n">Вит. Е, мг/100 г</th><th>Источник ЖК-состава</th><th></th></tr></thead><tbody id="lib-table"></tbody></table></div>
     <div class="btns"><button type="button" id="lib-new">+ Новое масло</button><button type="button" class="ghost" id="lib-reset">Восстановить исходный справочник</button></div>
     <div id="reset-confirm" class="confirm" hidden>Все ваши изменения и добавленные масла будут удалены. <button type="button" id="reset-yes">Удалить изменения</button><button type="button" class="ghost" id="reset-no">Отмена</button></div>
     <form id="editor" class="panel" style="background:var(--surface-2)" hidden>
       <h3 id="ed-title">Редактирование масла</h3>
       <div class="optgrid">
         <label class="field"><span>Название</span><input type="text" id="ed-name" required></label>
-        <label class="field"><span>Источник данных</span><input type="text" id="ed-src"></label>
+        <label class="field"><span>Источник жирнокислотного состава</span><input type="text" id="ed-src"></label>
       </div>
+      <p class="small muted">Жирные кислоты, % от суммы ЖК</p>
       <div class="fagrid" id="ed-fa"></div>
       <div class="btns"><span class="chip neutral" id="ed-sum"></span></div>
+      <p class="small muted">Токоферолы и токотриенолы, мг/кг масла. Оставьте все поля пустыми, если данных нет.</p>
+      <div class="tocgrid" id="ed-toc"></div>
+      <label class="field"><span>Источник данных о токоферолах</span><input type="text" id="ed-tsrc"></label>
       <div class="btns"><button type="submit" class="primary">Сохранить</button><button type="button" class="ghost" id="ed-cancel">Отмена</button><button type="button" class="ghost" id="ed-delete" hidden>Удалить масло</button></div>
     </form>
   </details>
@@ -257,25 +312,26 @@ details.panel[open] > summary::after { content: "–"; }
   <details class="panel">
     <summary>Методика расчёта</summary>
     <div class="prose">
-      <p>Содержание жирной кислоты <i>j</i> в купаже – взвешенная сумма по маслам-компонентам: F<sub>j</sub> = Σ x<sub>i</sub>·a<sub>ij</sub>, где x<sub>i</sub> – массовая доля масла, a<sub>ij</sub> – содержание кислоты в масле, % от суммы ЖК.</p>
-      <p>При оптимизации условие ω-6 : ω-3 = R приводится к линейному виду Σ x<sub>i</sub>(ω6<sub>i</sub> − R·ω3<sub>i</sub>) = 0, поэтому задача решается симплекс-методом (библиотека javascript-lp-solver). Минимум AI ищется бисекцией по уровню индекса.</p>
+      <p>Содержание жирной кислоты <i>j</i> в купаже – взвешенная сумма по маслам-компонентам: F<sub>j</sub> = Σ x<sub>i</sub>·a<sub>ij</sub>, где x<sub>i</sub> – массовая доля масла, a<sub>ij</sub> – содержание кислоты, % от суммы ЖК. Так же, по массе, складываются токоферолы.</p>
+      <p>Задача оптимизации решается симплекс-методом (javascript-lp-solver). Отношения (ω-6 : ω-3, AI, h/H, ПНЖК/НЖК) в ограничениях линеаризуются: R ≤ r превращается в Σ x<sub>i</sub>(числитель<sub>i</sub> − r·знаменатель<sub>i</sub>) ≤ 0. Минимум или максимум отношения ищется бисекцией по уровню r, приближение к значению – минимизацией отклонений d⁺ + d⁻. Число масел задаётся бинарными переменными y<sub>i</sub>: x<sub>i</sub> ≤ x<sub>i</sub><sup>max</sup>·y<sub>i</sub>, x<sub>i</sub> ≥ x<sup>min</sup>·y<sub>i</sub>, n<sub>min</sub> ≤ Σ y<sub>i</sub> ≤ n<sub>max</sub> (метод ветвей и границ).</p>
       <div class="formula">AI = (C12:0 + 4·C14:0 + C16:0) / (Σω-3 + Σω-6 + ΣМНЖК)</div>
       <div class="formula">TI = (C14:0 + C16:0 + C18:0) / (0,5·ΣМНЖК + 0,5·Σω-6 + 3·Σω-3 + Σω-3/Σω-6)</div>
       <div class="formula">h/H = (C18:1 + C18:2 + C18:3 n-3) / (C12:0 + C14:0 + C16:0)</div>
       <div class="formula">COX = (C18:1 + 10,3·C18:2 + 21,6·C18:3) / 100</div>
       <div class="formula">IV = 0,95·C16:1 + 0,86·C18:1 + 1,732·C18:2 + 2,616·C18:3</div>
-      <p class="small muted">γ-линоленовая кислота (C18:3 n-6) учитывается в COX и йодном числе как C18:3. Ориентир ω-6 : ω-3 = 5–10 : 1 – по МР 2.3.1.0253-21 (норма для рациона).</p>
+      <div class="formula">Витамин Е, мг α-ТЭ = α-T + 0,5·β-T + 0,1·γ-T + 0,03·δ-T + 0,3·α-T3 + 0,05·β-T3 + 0,01·γ-T3</div>
+      <p class="small muted">γ-линоленовая кислота (C18:3 n-6) учитывается в COX и йодном числе как C18:3. TI содержит нелинейное слагаемое Σω-3/Σω-6, поэтому рассчитывается, но не используется как цель. Ориентир ω-6 : ω-3 = 5–10 : 1 – по МР 2.3.1.0253-21 (норма для рациона). Данные по токоферолам часто получены для нерафинированных масел; рафинация снижает их содержание.</p>
       <h3>Источники</h3>
       <ul class="small" id="src-list"></ul>
     </div>
   </details>
-  <p class="small muted">Модель расчёта купажей · версия 1.0 · Титов Е. Д.</p>
+  <p class="small muted">Модель расчёта купажей · версия 2.0 · Титов Е. Д.</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/javascript-lp-solver@0.4.24/prod/solver.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-// Расчётное ядро калькулятора купажей (используется и в браузере, и в тестах node)
+// Расчётное ядро калькулятора купажей, версия 2: произвольная функция цели, ограничения, число масел
 (function (root) {
   const FA = ["C6:0","C8:0","C10:0","C12:0","C14:0","C16:0","C16:1","C17:0","C17:1","C18:0","C18:1",
     "C18:2","C18:3n3","C18:3n6","C20:0","C20:1","C20:2","C20:3n3","C22:0","C22:1","C22:2","C24:0","C24:1"];
@@ -284,116 +340,223 @@ details.panel[open] > summary::after { content: "–"; }
   ["C16:1","C17:1","C18:1","C20:1","C22:1","C24:1"].forEach(f => GROUP[f] = "mufa");
   ["C18:2","C18:3n6","C20:2","C22:2"].forEach(f => GROUP[f] = "w6");
   ["C18:3n3","C20:3n3"].forEach(f => GROUP[f] = "w3");
-  // COX (Fatemi, Hammond 1980): триеновые C18 считаются как линоленат
   const COXC = { "C18:1": 1, "C18:2": 10.3, "C18:3n3": 21.6, "C18:3n6": 21.6 };
-  // Расчётное йодное число (AOCS Cd 1c-85): C18:3 n-6 – как C18:3
   const IVC = { "C16:1": 0.95, "C18:1": 0.86, "C18:2": 1.732, "C18:3n3": 2.616, "C18:3n6": 2.616 };
+  const TOC = ["aT","bT","gT","dT","aT3","bT3","gT3","dT3"];
+  // α-токофероловый эквивалент (McLaughlin, Weihrauch, 1979)
+  const TEC = { aT: 1, bT: 0.5, gT: 0.1, dT: 0.03, aT3: 0.3, bT3: 0.05, gT3: 0.01, dT3: 0 };
 
-  const g = (c, f) => +(c[f] || 0);
+  const g = (c, f) => +((c || {})[f] || 0);
+  const sumG = (c, grp) => FA.filter(f => GROUP[f] === grp).reduce((a, f) => a + g(c, f), 0);
 
-  function blend(oils, shares) { // shares – доли (сумма 1)
-    const F = {};
-    FA.forEach(f => { F[f] = 0; });
-    oils.forEach((o, i) => FA.forEach(f => { F[f] += shares[i] * g(o.comp, f); }));
+  // Коэффициенты одного масла: все линейные величины (на 1 кг масла)
+  function coef(o) {
+    const c = o.comp, k = {};
+    FA.forEach(f => { k["fa:" + f] = g(c, f); });
+    k.sfa = sumG(c, "sfa"); k.mufa = sumG(c, "mufa"); k.w6 = sumG(c, "w6"); k.w3 = sumG(c, "w3"); k.pufa = k.w6 + k.w3;
+    k.cox = Object.keys(COXC).reduce((a, f) => a + COXC[f] * g(c, f), 0) / 100;
+    k.iv = Object.keys(IVC).reduce((a, f) => a + IVC[f] * g(c, f), 0);
+    k.aiNum = g(c, "C12:0") + 4 * g(c, "C14:0") + g(c, "C16:0"); k.aiDen = k.w3 + k.w6 + k.mufa;
+    k.hNum = g(c, "C18:1") + g(c, "C18:2") + g(c, "C18:3n3"); k.hDen = g(c, "C12:0") + g(c, "C14:0") + g(c, "C16:0");
+    k.tiNum = g(c, "C14:0") + g(c, "C16:0") + g(c, "C18:0");
+    const t = o.toc;
+    k.hasToc = !!t;
+    k.vitE = t ? TOC.reduce((a, n) => a + TEC[n] * (+t[n] || 0), 0) / 10 : null;   // мг α-ТЭ / 100 г
+    k.toc = t ? TOC.reduce((a, n) => a + (+t[n] || 0), 0) : null;                 // мг / кг
+    TOC.forEach(n => { k["toc:" + n] = t ? (+t[n] || 0) : null; });
+    k.price = o.price;
+    return k;
+  }
+
+  // Реестр показателей. lin: линейная величина; ratio: [числитель, знаменатель]
+  const IND = [
+    { id: "w6w3", label: "ω-6 : ω-3", unit: "", ratio: ["w6", "w3"], cat: "Показатели" },
+    { id: "cox", label: "Окисляемость COX", unit: "", lin: "cox", cat: "Показатели" },
+    { id: "ai", label: "Индекс атерогенности AI", unit: "", ratio: ["aiNum", "aiDen"], cat: "Показатели" },
+    { id: "hH", label: "h/H", unit: "", ratio: ["hNum", "hDen"], cat: "Показатели" },
+    { id: "ps", label: "ПНЖК / НЖК", unit: "", ratio: ["pufa", "sfa"], cat: "Показатели" },
+    { id: "iv", label: "Йодное число (расч.)", unit: "г I₂/100 г", lin: "iv", cat: "Показатели" },
+    { id: "cost", label: "Стоимость", unit: "руб./кг", lin: "price", cat: "Показатели", needs: "price" },
+    { id: "sfa", label: "НЖК", unit: "%", lin: "sfa", cat: "Группы жирных кислот" },
+    { id: "mufa", label: "МНЖК", unit: "%", lin: "mufa", cat: "Группы жирных кислот" },
+    { id: "pufa", label: "ПНЖК", unit: "%", lin: "pufa", cat: "Группы жирных кислот" },
+    { id: "w6", label: "ω-6 ПНЖК", unit: "%", lin: "w6", cat: "Группы жирных кислот" },
+    { id: "w3", label: "ω-3 ПНЖК", unit: "%", lin: "w3", cat: "Группы жирных кислот" },
+    { id: "vitE", label: "Витамин Е", unit: "мг α-ТЭ/100 г", lin: "vitE", cat: "Витамин Е", needs: "toc" },
+    { id: "toc", label: "Сумма токоферолов и токотриенолов", unit: "мг/кг", lin: "toc", cat: "Витамин Е", needs: "toc" },
+    { id: "toc:aT", label: "α-токоферол", unit: "мг/кг", lin: "toc:aT", cat: "Витамин Е", needs: "toc" },
+    { id: "toc:gT", label: "γ-токоферол", unit: "мг/кг", lin: "toc:gT", cat: "Витамин Е", needs: "toc" },
+  ].concat(FA.map(f => ({ id: "fa:" + f, label: f.replace("n3", " n-3").replace("n6", " n-6"), unit: "%", lin: "fa:" + f, cat: "Жирные кислоты" })));
+  const indById = Object.fromEntries(IND.map(i => [i.id, i]));
+
+  function blend(oils, x) {
+    const F = {}; FA.forEach(f => { F[f] = 0; });
+    oils.forEach((o, i) => FA.forEach(f => { F[f] += x[i] * g(o.comp, f); }));
     return F;
   }
-  function sumGroup(F, grp) { return FA.filter(f => GROUP[f] === grp).reduce((a, f) => a + g(F, f), 0); }
-  function indices(F) {
-    const sfa = sumGroup(F, "sfa"), mufa = sumGroup(F, "mufa"), w6 = sumGroup(F, "w6"), w3 = sumGroup(F, "w3");
-    const pufa = w6 + w3;
+  // Все показатели купажа по долям x (сумма 1)
+  function evaluate(oils, x) {
+    const K = oils.map(coef), lin = (key) => K.reduce((a, k, i) => a + x[i] * (k[key] || 0), 0);
     const div = (a, b) => (b > 1e-12 ? a / b : null);
-    const ai = div(g(F, "C12:0") + 4 * g(F, "C14:0") + g(F, "C16:0"), w3 + w6 + mufa);
-    const tiDen = 0.5 * mufa + 0.5 * w6 + 3 * w3 + (w6 > 1e-12 ? w3 / w6 : 0);
-    const ti = div(g(F, "C14:0") + g(F, "C16:0") + g(F, "C18:0"), tiDen);
-    const hH = div(g(F, "C18:1") + g(F, "C18:2") + g(F, "C18:3n3"), g(F, "C12:0") + g(F, "C14:0") + g(F, "C16:0"));
-    const cox = Object.keys(COXC).reduce((a, f) => a + COXC[f] * g(F, f), 0) / 100;
-    const iv = Object.keys(IVC).reduce((a, f) => a + IVC[f] * g(F, f), 0);
-    return { sfa, mufa, pufa, w6, w3, ratio: div(w6, w3), ps: div(pufa, sfa), ai, ti, hH, cox, iv,
-      erucic: g(F, "C22:1"), total: FA.reduce((a, f) => a + g(F, f), 0) };
-  }
-  function oilCoef(o) { // линейные коэффициенты показателей одного масла
-    const F = {}; FA.forEach(f => { F[f] = g(o.comp, f); });
-    const sfa = sumGroup(F, "sfa"), mufa = sumGroup(F, "mufa"), w6 = sumGroup(F, "w6"), w3 = sumGroup(F, "w3");
-    return { sfa, mufa, w6, w3, pufa: w6 + w3, erucic: g(F, "C22:1"),
-      cox: Object.keys(COXC).reduce((a, f) => a + COXC[f] * g(F, f), 0) / 100,
-      aiNum: g(F, "C12:0") + 4 * g(F, "C14:0") + g(F, "C16:0"), aiDen: w3 + w6 + mufa };
+    const r = { sfa: lin("sfa"), mufa: lin("mufa"), w6: lin("w6"), w3: lin("w3"), pufa: lin("pufa"), cox: lin("cox"), iv: lin("iv") };
+    r.w6w3 = div(r.w6, r.w3); r.ps = div(r.pufa, r.sfa);
+    r.ai = div(lin("aiNum"), lin("aiDen")); r.hH = div(lin("hNum"), lin("hDen"));
+    r.ti = div(lin("tiNum"), 0.5 * r.mufa + 0.5 * r.w6 + 3 * r.w3 + (r.w6 > 1e-12 ? r.w3 / r.w6 : 0));
+    const used = K.filter((k, i) => x[i] > 1e-9);
+    r.tocMissing = oils.filter((o, i) => x[i] > 1e-9 && !K[i].hasToc).map(o => o.name);
+    r.vitE = r.tocMissing.length ? null : lin("vitE");
+    r.toc = r.tocMissing.length ? null : lin("toc");
+    r["toc:aT"] = r.tocMissing.length ? null : lin("toc:aT"); r["toc:gT"] = r.tocMissing.length ? null : lin("toc:gT");
+    const priced = oils.every((o, i) => x[i] <= 1e-9 || isFinite(o.price));
+    r.cost = priced ? oils.reduce((a, o, i) => a + (x[i] > 1e-9 ? x[i] * o.price : 0), 0) : null;
+    FA.forEach(f => { r["fa:" + f] = lin("fa:" + f); });
+    r.F = blend(oils, x); r.total = FA.reduce((a, f) => a + r.F[f], 0); r.erucic = r.F["C22:1"];
+    r.count = used.length;
+    return r;
   }
 
-  // opt: {objective: 'cox'|'cost'|'ai', rMin, rMax, bounds:[[lo,hi]], prices:[], sfaMax, w3Min, erucicMax, psMin, aiMax}
-  function optimize(oils, opt, LP) {
-    const n = oils.length, K = oils.map(oilCoef);
-    const cons = { sum: { equal: 1 } };
-    const vars = {};
-    if (opt.rMax != null) cons.rhi = { max: 0 };
-    if (opt.rMin != null) cons.rlo = { min: 0 };
-    if (opt.sfaMax != null) cons.sfa = { max: opt.sfaMax };
-    if (opt.w3Min != null) cons.w3 = { min: opt.w3Min };
-    if (opt.erucicMax != null) cons.eru = { max: opt.erucicMax };
-    if (opt.psMin != null) cons.ps = { min: 0 };
-    if (opt.aiMax != null) cons.ai = { max: 0 };
-    for (let i = 0; i < n; i++) {
-      const k = K[i], v = { sum: 1 };
-      v["b" + i] = 1;
-      cons["b" + i] = { min: opt.bounds[i][0], max: opt.bounds[i][1] };
-      if (cons.rhi) v.rhi = k.w6 - opt.rMax * k.w3;
-      if (cons.rlo) v.rlo = k.w6 - opt.rMin * k.w3;
-      if (cons.sfa) v.sfa = k.sfa;
-      if (cons.w3) v.w3 = k.w3;
-      if (cons.eru) v.eru = k.erucic;
-      if (cons.ps) v.ps = k.pufa - opt.psMin * k.sfa;
-      if (cons.ai) v.ai = k.aiNum - opt.aiMax * k.aiDen;
-      v.obj = opt.objective === "cost" ? +opt.prices[i] : opt.objective === "ai" ? null : k.cox;
-      vars["x" + i] = v;
+  /*
+   task = {
+     oils: [ {..., price, lo, hi} ],          // кандидаты с границами долей (доли единицы)
+     goal: { ind, sense: 'min'|'max'|'target', value },
+     cons: [ { ind, op: '<='|'>='|'=', value } ],
+     count: { min, max } | null,              // число масел в купаже
+     minUse: 0.01                              // мин. доля включённого масла
+   }
+  */
+  function solve(task, LP) {
+    let oils = task.oils.slice();
+    const notes = [];
+    const needs = new Set([task.goal.ind].concat(task.cons.map(c => c.ind)).map(id => indById[id] && indById[id].needs).filter(Boolean));
+    if (needs.has("toc")) {
+      const drop = oils.filter(o => !o.toc && o.lo <= 0); const forced = oils.filter(o => !o.toc && o.lo > 0);
+      if (forced.length) return { feasible: false, reason: "noToc", names: forced.map(o => o.name) };
+      if (drop.length) notes.push("исключены масла без данных о токоферолах: " + drop.map(o => o.name).join(", "));
+      oils = oils.filter(o => o.toc);
     }
-    let model;
-    if (opt.objective === "ai") {
-      // Минимум AI – дробно-линейная задача: бисекция по уровню t (AI ≤ t выполнимо?)
-      let lo = 0, hi = Math.max(...K.map(k => (k.aiDen > 0 ? k.aiNum / k.aiDen : 0))) + 1e-6, best = null;
-      for (let it = 0; it < 60; it++) {
-        const t = (lo + hi) / 2;
-        const m = JSON.parse(JSON.stringify({ optimize: "obj", opType: "min", constraints: cons, variables: vars }));
-        m.constraints.aiT = { max: 0 };
-        for (let i = 0; i < n; i++) { m.variables["x" + i].aiT = K[i].aiNum - t * K[i].aiDen; m.variables["x" + i].obj = K[i].cox; }
-        const r = LP.Solve(m);
-        if (r.feasible) { hi = t; best = r; } else lo = t;
+    if (needs.has("price")) {
+      const bad = oils.filter(o => !isFinite(o.price));
+      if (bad.some(o => o.lo > 0)) return { feasible: false, reason: "noPrice", names: bad.map(o => o.name) };
+      if (bad.length) notes.push("исключены масла без цены: " + bad.map(o => o.name).join(", "));
+      oils = oils.filter(o => isFinite(o.price));
+    }
+    if (!oils.length) return { feasible: false, reason: "empty" };
+    const K = oils.map(coef), n = oils.length;
+    const useInt = !!task.count || false;
+    const base = () => {
+      const m = { optimize: "obj", opType: "min", constraints: { sum: { equal: 1 } }, variables: {}, binaries: {} };
+      for (let i = 0; i < n; i++) {
+        const v = { sum: 1, obj: 0 }; v["b" + i] = 1; m.constraints["b" + i] = { min: oils[i].lo, max: oils[i].hi };
+        m.variables["x" + i] = v;
+        if (useInt) {
+          const y = { obj: 0, cnt: 1 }; y["u" + i] = -oils[i].hi; y["l" + i] = -Math.max(oils[i].lo, task.minUse || 0);
+          v["u" + i] = 1; v["l" + i] = 1;
+          m.constraints["u" + i] = { max: 0 }; m.constraints["l" + i] = { min: 0 };
+          m.variables["y" + i] = y; m.binaries["y" + i] = 1;
+        }
       }
-      if (!best) return { feasible: false };
-      return { feasible: true, shares: oils.map((_, i) => +(best["x" + i] || 0)) };
+      if (useInt) m.constraints.cnt = { min: task.count.min, max: task.count.max };
+      task.cons.forEach((c, j) => addRow(m, "c" + j, c.ind, c.op, c.value));
+      return m;
+    };
+    function coeffs(indId, t) { // линейные коэффициенты строки: для отношения – num − t·den
+      const d = indById[indId];
+      return K.map(k => d.ratio ? (k[d.ratio[0]] - t * k[d.ratio[1]]) : (k[d.lin] == null ? 0 : (d.lin === "price" ? +k.price : k[d.lin])));
     }
-    model = { optimize: "obj", opType: "min", constraints: cons, variables: vars };
-    const r = LP.Solve(model);
-    if (!r.feasible) return { feasible: false };
-    return { feasible: true, shares: oils.map((_, i) => +(r["x" + i] || 0)) };
+    function addRow(m, name, indId, op, value) {
+      const d = indById[indId]; const a = coeffs(indId, value);
+      a.forEach((v, i) => { m.variables["x" + i][name] = v; });
+      const rhs = d.ratio ? 0 : value;
+      m.constraints[name] = op === "<=" ? { max: rhs } : op === ">=" ? { min: rhs } : { equal: rhs };
+    }
+    const run = (m) => { const r = LP.Solve(m); return r && r.feasible ? r : null; };
+    const sharesOf = (r) => oils.map((_, i) => Math.max(0, +(r["x" + i] || 0)));
+    const coxTie = (m) => { for (let i = 0; i < n; i++) m.variables["x" + i].obj = K[i].cox; };
+
+    const G = indById[task.goal.ind]; let best = null;
+    if (G.ratio && task.goal.sense !== "target") {
+      // дробно-линейная цель: бисекция по уровню t
+      const vals = K.map(k => (k[G.ratio[1]] > 1e-12 ? k[G.ratio[0]] / k[G.ratio[1]] : 0));
+      let lo = Math.min(0, ...vals), hi = Math.max(...vals) + 1e-6;
+      const feasibleAt = (t) => { const m = base(); addRow(m, "goal", G.id, task.goal.sense === "min" ? "<=" : ">=", t); coxTie(m); return run(m); };
+      if (!feasibleAt(task.goal.sense === "min" ? hi : lo)) return { feasible: false, reason: "infeasible", notes };
+      for (let it = 0; it < 42 && hi - lo > 1e-7 * Math.max(1, Math.abs(hi)); it++) {
+        const t = (lo + hi) / 2, r = feasibleAt(t);
+        if (task.goal.sense === "min") { if (r) { hi = t; best = r; } else lo = t; }
+        else { if (r) { lo = t; best = r; } else hi = t; }
+      }
+      if (!best) best = feasibleAt(task.goal.sense === "min" ? hi : lo);
+    } else {
+      // линейная цель (min/max) или приближение к значению через отклонения d+ и d−
+      const m = base(); let dev = false;
+      if (task.goal.sense === "target") {
+        dev = true; const a = coeffs(G.id, G.ratio ? task.goal.value : 0);
+        a.forEach((v, i) => { m.variables["x" + i].goal = v; });
+        m.variables.dp = { goal: -1, obj: 1 }; m.variables.dn = { goal: 1, obj: 1 };
+        m.constraints.goal = { equal: G.ratio ? 0 : task.goal.value };
+      } else {
+        const s = task.goal.sense === "max" ? -1 : 1; coeffs(G.id, 0).forEach((v, i) => { m.variables["x" + i].obj = s * v; });
+      }
+      const r1 = run(m); if (!r1) return { feasible: false, reason: "infeasible", notes };
+      best = r1;
+      // второй этап: при том же значении цели – минимум COX (если цель не COX)
+      if (G.id !== "cox") {
+        const opt = r1.result, tol = 1e-6 * Math.max(1, Math.abs(opt)) + 1e-7;
+        const m2 = JSON.parse(JSON.stringify(m));
+        for (const key in m2.variables) { const v = m2.variables[key]; v.lock = v.obj || 0; v.obj = 0; }
+        m2.constraints.lock = { max: opt + tol };
+        for (let i = 0; i < n; i++) m2.variables["x" + i].obj = K[i].cox;
+        const r2 = run(m2); if (r2) best = r2;
+      }
+    }
+    if (!best) return { feasible: false, reason: "infeasible", notes };
+    const x = sharesOf(best), s = x.reduce((a, b) => a + b, 0);
+    return { feasible: true, oils, shares: x.map(v => v / s), notes };
   }
 
-  const api = { FA, GROUP, COXC, IVC, blend, indices, optimize, oilCoef, sumGroup };
+  const api = { FA, GROUP, COXC, IVC, TOC, TEC, IND, indById, coef, blend, evaluate, solve };
   if (typeof module !== "undefined") module.exports = api; else root.BlendEngine = api;
 })(this);
 
 </script>
 <script>
-const DEFAULT_LIB = {"fa":["C6:0","C8:0","C10:0","C12:0","C14:0","C16:0","C16:1","C17:0","C17:1","C18:0","C18:1","C18:2","C18:3n3","C18:3n6","C20:0","C20:1","C20:2","C20:3n3","C22:0","C22:1","C22:2","C24:0","C24:1"],"oils":[{"id":"sunflower","name":"Подсолнечное","comp":{"C12:0":0.05,"C14:0":0.1,"C16:0":6.22,"C16:1":0.15,"C17:0":0.1,"C17:1":0.05,"C18:0":4.54,"C18:1":26.37,"C18:2":60.4,"C18:3n3":0.15,"C20:0":0.3,"C20:1":0.15,"C22:0":0.89,"C22:1":0.15,"C22:2":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"sunflower_ho","name":"Подсолнечное высокоолеиновое","comp":{"C14:0":0.05,"C16:0":3.68,"C16:1":0.05,"C17:0":0.05,"C17:1":0.05,"C18:0":4.41,"C18:1":80.28,"C18:2":9.25,"C18:3n3":0.15,"C20:0":0.34,"C20:1":0.29,"C22:0":1.02,"C22:1":0.15,"C24:0":0.24},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"rapeseed","name":"Рапсовое (низкоэруковое)","comp":{"C14:0":0.1,"C16:0":4.55,"C16:1":0.29,"C17:0":0.14,"C17:1":0.14,"C18:0":1.82,"C18:1":57.89,"C18:2":21.53,"C18:3n3":9.09,"C20:0":0.67,"C20:1":2.11,"C20:2":0.05,"C22:0":0.29,"C22:1":0.96,"C22:2":0.05,"C24:0":0.14,"C24:1":0.19},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"soybean","name":"Соевое","comp":{"C12:0":0.05,"C14:0":0.1,"C16:0":10.65,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":3.67,"C18:1":23.28,"C18:2":53.0,"C18:3n3":7.68,"C20:0":0.35,"C20:1":0.25,"C20:2":0.05,"C22:0":0.35,"C22:1":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"maize","name":"Кукурузное","comp":{"C12:0":0.15,"C14:0":0.15,"C16:0":12.74,"C16:1":0.25,"C17:0":0.05,"C17:1":0.05,"C18:0":1.68,"C18:1":31.57,"C18:2":50.56,"C18:3n3":1.02,"C20:0":0.66,"C20:1":0.41,"C20:2":0.05,"C22:0":0.25,"C22:1":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"mustard","name":"Горчичное","comp":{"C14:0":0.51,"C16:0":2.53,"C16:1":0.25,"C18:0":1.26,"C18:1":15.68,"C18:2":17.2,"C18:3n3":12.14,"C20:0":0.76,"C20:1":9.1,"C20:2":0.51,"C22:0":1.37,"C22:1":36.42,"C22:2":0.51,"C24:0":0.25,"C24:1":1.52},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"cottonseed","name":"Хлопковое","comp":{"C12:0":0.1,"C14:0":0.8,"C16:0":23.89,"C16:1":0.6,"C17:0":0.05,"C17:1":0.05,"C18:0":2.7,"C18:1":18.19,"C18:2":52.42,"C18:3n3":0.2,"C20:0":0.35,"C20:1":0.05,"C20:2":0.05,"C22:0":0.3,"C22:1":0.15,"C22:2":0.05,"C24:0":0.05},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"peanut","name":"Арахисовое","comp":{"C12:0":0.05,"C14:0":0.05,"C16:0":10.87,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":2.72,"C18:1":51.38,"C18:2":27.17,"C18:3n3":0.15,"C20:0":1.48,"C20:1":1.19,"C22:0":2.96,"C22:1":0.15,"C24:0":1.48,"C24:1":0.15},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"sesame","name":"Кунжутное","comp":{"C14:0":0.05,"C16:0":9.87,"C16:1":0.15,"C17:0":0.1,"C17:1":0.05,"C18:0":5.41,"C18:1":38.79,"C18:2":44.35,"C18:3n3":0.35,"C20:0":0.45,"C20:1":0.15,"C22:0":0.15,"C24:0":0.15},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"safflower","name":"Сафлоровое","comp":{"C14:0":0.1,"C16:0":6.53,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":2.36,"C18:1":14.58,"C18:2":74.13,"C18:3n3":0.05,"C20:0":0.29,"C20:1":0.2,"C22:0":0.49,"C22:1":0.88,"C24:0":0.1,"C24:1":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"grapeseed","name":"Виноградных косточек","comp":{"C14:0":0.14,"C16:0":7.96,"C16:1":0.58,"C17:0":0.1,"C17:1":0.05,"C18:0":4.58,"C18:1":19.3,"C18:2":65.61,"C18:3n3":0.48,"C20:0":0.48,"C20:1":0.14,"C22:0":0.24,"C22:1":0.14,"C24:0":0.19},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"palm","name":"Пальмовое","comp":{"C12:0":0.25,"C14:0":1.23,"C16:0":42.72,"C16:1":0.3,"C17:0":0.1,"C18:0":4.68,"C18:1":39.37,"C18:2":10.33,"C18:3n3":0.25,"C20:0":0.49,"C20:1":0.2,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"palm_olein","name":"Пальмовый олеин","comp":{"C12:0":0.29,"C14:0":0.98,"C16:0":39.83,"C16:1":0.29,"C17:0":0.1,"C17:1":0.05,"C18:0":4.15,"C18:1":41.94,"C18:2":11.49,"C18:3n3":0.29,"C20:0":0.29,"C20:1":0.2,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"palm_kernel","name":"Пальмоядровое","comp":{"C6:0":0.39,"C8:0":4.17,"C10:0":3.69,"C12:0":48.54,"C14:0":15.53,"C16:0":8.01,"C16:1":0.1,"C18:0":1.94,"C18:1":15.05,"C18:2":2.18,"C18:3n3":0.1,"C20:0":0.1,"C20:1":0.1,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"coconut","name":"Кокосовое","comp":{"C6:0":0.34,"C8:0":7.05,"C10:0":6.27,"C12:0":47.44,"C14:0":18.24,"C16:0":8.54,"C18:0":2.9,"C18:1":7.24,"C18:2":1.69,"C18:3n3":0.1,"C20:0":0.1,"C20:1":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"olive","name":"Оливковое","comp":{"C14:0":0.05,"C16:0":13.47,"C16:1":1.86,"C17:0":0.24,"C17:1":0.29,"C18:0":2.69,"C18:1":67.61,"C18:2":12.0,"C18:3n3":0.73,"C20:0":0.39,"C22:0":0.15,"C24:0":0.49},"src":"Codex Stan 33-1981: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":""},{"id":"linseed","name":"Льняное","comp":{"C16:0":5.55,"C18:0":4.35,"C18:1":20.95,"C18:2":14.1,"C18:3n3":55.05},"src":"OCL, 2016, 23(5), табл. 3: середины диапазонов","url":"https://www.ocl-journal.org/articles/ocl/full_html/2016/05/ocl160021-s/T3.html","cat":"Литература","note":""},{"id":"camelina","name":"Рыжиковое","comp":{"C16:0":9.53,"C18:0":3.46,"C18:1":17.04,"C18:2":19.78,"C18:3n3":33.28,"C20:0":0.41,"C20:1":13.61,"C20:2":1.61,"C20:3n3":0.24,"C22:1":1.07},"src":"Scientific Papers. Series A. Agronomy, 2021, 64(1), образец 7c/1","url":"https://agronomyjournal.usamv.ro/pdf/2021/issue_1/Art26.pdf","cat":"Литература","note":""},{"id":"chia","name":"Семян чиа","comp":{"C16:0":9.82,"C18:0":4.91,"C18:1":10.73,"C18:2":21.33,"C18:3n3":53.22},"src":"Панова А. С. и др. Растительные ресурсы, 2020, 56(4), с. 351–362","url":"https://sciencejournals.ru/issues/rastres/2020/vol_56/iss_4/RastRes2003006Panova/RastRes2003006Panova.pdf","cat":"Литература","note":""},{"id":"hemp","name":"Конопляное","comp":{"C16:0":7.06,"C18:0":3.06,"C18:1":15.68,"C18:2":57.04,"C20:0":0.81,"C18:3n6":2.02,"C18:3n3":13.84,"C20:1":0.5},"src":"OCL, 2023, 30, ocl230024, табл. 5 (семена сорта Futura 75)","url":"https://www.ocl-journal.org/articles/ocl/full_html/2023/01/ocl230024/T5.html","cat":"Литература","note":""},{"id":"walnut","name":"Грецкого ореха","comp":{"C16:0":7.1,"C16:1":0.22,"C18:0":1.7,"C18:1":20.02,"C18:2":60.3,"C18:3n3":10.44,"C20:0":0.06},"src":"Rabrenovic B. et al. Czech J. Food Sci., 2011, 29(1), 74–78: среднее 5 сортов, холодный отжим","url":"https://scidar.kg.ac.rs/bitstream/123456789/10063/1/10.17221-180-2010-cjfs.pdf","cat":"Литература","note":""},{"id":"ricebran","name":"Рисовых отрубей","comp":{"C14:0":0.2,"C16:0":18.6,"C18:0":1.4,"C18:1":43.5,"C18:2":32.7,"C18:3n3":0.8,"C20:0":0.4,"C22:0":0.1,"C24:0":0.3},"src":"OCL, 2021, 28, ocl210058, табл. 1","url":"https://www.ocl-journal.org/articles/ocl/full_html/2021/01/ocl210058/T1.html","cat":"Литература","note":""}]};
+const DEFAULT_LIB = {"fa":["C6:0","C8:0","C10:0","C12:0","C14:0","C16:0","C16:1","C17:0","C17:1","C18:0","C18:1","C18:2","C18:3n3","C18:3n6","C20:0","C20:1","C20:2","C20:3n3","C22:0","C22:1","C22:2","C24:0","C24:1"],"oils":[{"id":"sunflower","name":"Подсолнечное","comp":{"C12:0":0.05,"C14:0":0.1,"C16:0":6.22,"C16:1":0.15,"C17:0":0.1,"C17:1":0.05,"C18:0":4.54,"C18:1":26.37,"C18:2":60.4,"C18:3n3":0.15,"C20:0":0.3,"C20:1":0.15,"C22:0":0.89,"C22:1":0.15,"C22:2":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":575,"gT":25.2,"dT":8.8},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, рафинированное (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"sunflower_ho","name":"Подсолнечное высокоолеиновое","comp":{"C14:0":0.05,"C16:0":3.68,"C16:1":0.05,"C17:0":0.05,"C17:1":0.05,"C18:0":4.41,"C18:1":80.28,"C18:2":9.25,"C18:3n3":0.15,"C20:0":0.34,"C20:1":0.29,"C22:0":1.02,"C22:1":0.15,"C24:0":0.24},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":745,"bT":22.5,"gT":16.5,"dT":8.5},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"rapeseed","name":"Рапсовое (низкоэруковое)","comp":{"C14:0":0.1,"C16:0":4.55,"C16:1":0.29,"C17:0":0.14,"C17:1":0.14,"C18:0":1.82,"C18:1":57.89,"C18:2":21.53,"C18:3n3":9.09,"C20:0":0.67,"C20:1":2.11,"C20:2":0.05,"C22:0":0.29,"C22:1":0.96,"C22:2":0.05,"C24:0":0.14,"C24:1":0.19},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":178,"gT":281,"dT":12},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, рафинированное (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"soybean","name":"Соевое","comp":{"C12:0":0.05,"C14:0":0.1,"C16:0":10.65,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":3.67,"C18:1":23.28,"C18:2":53.0,"C18:3n3":7.68,"C20:0":0.35,"C20:1":0.25,"C20:2":0.05,"C22:0":0.35,"C22:1":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":152,"gT":494,"dT":182},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, рафинированное (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"maize","name":"Кукурузное","comp":{"C12:0":0.15,"C14:0":0.15,"C16:0":12.74,"C16:1":0.25,"C17:0":0.05,"C17:1":0.05,"C18:0":1.68,"C18:1":31.57,"C18:2":50.56,"C18:3n3":1.02,"C20:0":0.66,"C20:1":0.41,"C20:2":0.05,"C22:0":0.25,"C22:1":0.15,"C24:0":0.25},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":207,"gT":592,"dT":30},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, рафинированное (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"mustard","name":"Горчичное","comp":{"C14:0":0.51,"C16:0":2.53,"C16:1":0.25,"C18:0":1.26,"C18:1":15.68,"C18:2":17.2,"C18:3n3":12.14,"C20:0":0.76,"C20:1":9.1,"C20:2":0.51,"C22:0":1.37,"C22:1":36.42,"C22:2":0.51,"C24:0":0.25,"C24:1":1.52},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":null},{"id":"cottonseed","name":"Хлопковое","comp":{"C12:0":0.1,"C14:0":0.8,"C16:0":23.89,"C16:1":0.6,"C17:0":0.05,"C17:1":0.05,"C18:0":2.7,"C18:1":18.19,"C18:2":52.42,"C18:3n3":0.2,"C20:0":0.35,"C20:1":0.05,"C20:2":0.05,"C22:0":0.3,"C22:1":0.15,"C22:2":0.05,"C24:0":0.05},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":405,"bT":14.5,"gT":442,"dT":10.5},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"peanut","name":"Арахисовое","comp":{"C12:0":0.05,"C14:0":0.05,"C16:0":10.87,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":2.72,"C18:1":51.38,"C18:2":27.17,"C18:3n3":0.15,"C20:0":1.48,"C20:1":1.19,"C22:0":2.96,"C22:1":0.15,"C24:0":1.48,"C24:1":0.15},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":102,"gT":112,"dT":12},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, рафинированное (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"sesame","name":"Кунжутное","comp":{"C14:0":0.05,"C16:0":9.87,"C16:1":0.15,"C17:0":0.1,"C17:1":0.05,"C18:0":5.41,"C18:1":38.79,"C18:2":44.35,"C18:3n3":0.35,"C20:0":0.45,"C20:1":0.15,"C22:0":0.15,"C24:0":0.15},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":1.65,"gT":752,"dT":12.5,"gT3":10},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"safflower","name":"Сафлоровое","comp":{"C14:0":0.1,"C16:0":6.53,"C16:1":0.1,"C17:0":0.05,"C17:1":0.05,"C18:0":2.36,"C18:1":14.58,"C18:2":74.13,"C18:3n3":0.05,"C20:0":0.29,"C20:1":0.2,"C22:0":0.49,"C22:1":0.88,"C24:0":0.1,"C24:1":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":447,"bT":8.5,"gT":6,"gT3":6},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"grapeseed","name":"Виноградных косточек","comp":{"C14:0":0.14,"C16:0":7.96,"C16:1":0.58,"C17:0":0.1,"C17:1":0.05,"C18:0":4.58,"C18:1":19.3,"C18:2":65.61,"C18:3n3":0.48,"C20:0":0.48,"C20:1":0.14,"C22:0":0.24,"C22:1":0.14,"C24:0":0.19},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":103,"gT":15,"dT":3.4},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, рафинированное (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"palm","name":"Пальмовое","comp":{"C12:0":0.25,"C14:0":1.23,"C16:0":42.72,"C16:1":0.3,"C17:0":0.1,"C18:0":4.68,"C18:1":39.37,"C18:2":10.33,"C18:3n3":0.25,"C20:0":0.49,"C20:1":0.2,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":98.5,"bT":117,"gT":263,"dT":61.5,"aT3":170,"gT3":362,"dT3":188.5},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"palm_olein","name":"Пальмовый олеин","comp":{"C12:0":0.29,"C14:0":0.98,"C16:0":39.83,"C16:1":0.29,"C17:0":0.1,"C17:1":0.05,"C18:0":4.15,"C18:1":41.94,"C18:2":11.49,"C18:3n3":0.29,"C20:0":0.29,"C20:1":0.2,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":98.5,"bT":117,"gT":263,"dT":61.5,"aT3":170,"gT3":362,"dT3":188.5},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов; приняты значения пальмового масла","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"palm_kernel","name":"Пальмоядровое","comp":{"C6:0":0.39,"C8:0":4.17,"C10:0":3.69,"C12:0":48.54,"C14:0":15.53,"C16:0":8.01,"C16:1":0.1,"C18:0":1.94,"C18:1":15.05,"C18:2":2.18,"C18:3n3":0.1,"C20:0":0.1,"C20:1":0.1,"C22:0":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":22,"bT":124,"gT":128.5,"gT3":30},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"coconut","name":"Кокосовое","comp":{"C6:0":0.34,"C8:0":7.05,"C10:0":6.27,"C12:0":47.44,"C14:0":18.24,"C16:0":8.54,"C18:0":2.9,"C18:1":7.24,"C18:2":1.69,"C18:3n3":0.1,"C20:0":0.1,"C20:1":0.1},"src":"Codex Stan 210-1999, табл. 1: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":8.5,"bT":5.5,"gT":7,"aT3":22,"gT3":0.5},"tocSrc":"Codex Stan 210-1999, табл. 4 (нерафинированные масла): середины диапазонов","tocUrl":"https://www.fao.org/3/y2774e/y2774e04.htm"},{"id":"olive","name":"Оливковое","comp":{"C14:0":0.05,"C16:0":13.47,"C16:1":1.86,"C17:0":0.24,"C17:1":0.29,"C18:0":2.69,"C18:1":67.61,"C18:2":12.0,"C18:3n3":0.73,"C20:0":0.39,"C22:0":0.15,"C24:0":0.49},"src":"Codex Stan 33-1981: середины диапазонов, нормированы к 100 %","url":"https://www.fao.org/3/y2774e/y2774e04.htm","cat":"Codex","note":"","toc":{"aT":163,"gT":12.3,"dT":1.6},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, extra virgin (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"linseed","name":"Льняное","comp":{"C16:0":5.55,"C18:0":4.35,"C18:1":20.95,"C18:2":14.1,"C18:3n3":55.05},"src":"OCL, 2016, 23(5), табл. 3: середины диапазонов","url":"https://www.ocl-journal.org/articles/ocl/full_html/2016/05/ocl160021-s/T3.html","cat":"Литература","note":"","toc":{"gT":363,"dT":5.2},"tocSrc":"Gliszczyńska-Świgło A. et al. Pol. J. Food Nutr. Sci., 2007, 57(4A), 157–161, холодного отжима (β+γ учтены как γ)","tocUrl":"https://journal.pan.olsztyn.pl/pdf-98802-30805?filename=30805.pdf"},{"id":"camelina","name":"Рыжиковое","comp":{"C16:0":9.53,"C18:0":3.46,"C18:1":17.04,"C18:2":19.78,"C18:3n3":33.28,"C20:0":0.41,"C20:1":13.61,"C20:2":1.61,"C20:3n3":0.24,"C22:1":1.07},"src":"Scientific Papers. Series A. Agronomy, 2021, 64(1), образец 7c/1","url":"https://agronomyjournal.usamv.ro/pdf/2021/issue_1/Art26.pdf","cat":"Литература","note":"","toc":{"aT":15.2,"bT":9.15,"gT":115.25,"dT":2.4,"gT3":3.95},"tocSrc":"Budin J. T. et al. JAOCS, 1995, 72, 309–315: середины диапазонов (γ-T вместе с β-T3)","tocUrl":"https://scholarhub.vn/publication/:slug/5733a73d-e9f4-4f0a-95aa-5c9ce86b2d19"},{"id":"chia","name":"Семян чиа","comp":{"C16:0":9.82,"C18:0":4.91,"C18:1":10.73,"C18:2":21.33,"C18:3n3":53.22},"src":"Панова А. С. и др. Растительные ресурсы, 2020, 56(4), с. 351–362","url":"https://sciencejournals.ru/issues/rastres/2020/vol_56/iss_4/RastRes2003006Panova/RastRes2003006Panova.pdf","cat":"Литература","note":"","toc":{"aT":15,"gT":479,"dT":19},"tocSrc":"OCL, 2019, ocl190033, табл. 3: зрелые семена (35 сут после цветения)","tocUrl":"https://www.ocl-journal.org/articles/ocl/full_html/2019/01/ocl190033/T3.html"},{"id":"hemp","name":"Конопляное","comp":{"C16:0":7.06,"C18:0":3.06,"C18:1":15.68,"C18:2":57.04,"C20:0":0.81,"C18:3n6":2.02,"C18:3n3":13.84,"C20:1":0.5},"src":"OCL, 2023, 30, ocl230024, табл. 5 (семена сорта Futura 75)","url":"https://www.ocl-journal.org/articles/ocl/full_html/2023/01/ocl230024/T5.html","cat":"Литература","note":"","toc":{"aT":43,"gT":615,"dT":33.2},"tocSrc":"Latif S., Anwar F. Eur. J. Lipid Sci. Technol., 2009, 111, 1042–1048: холодный отжим, контроль","tocUrl":"https://www.votehemp.com/PDF/Physicochemical%20studies%20of%20hemp%20(Cannabis%20sativa)%20seed%20oil.pdf"},{"id":"walnut","name":"Грецкого ореха","comp":{"C16:0":7.1,"C16:1":0.22,"C18:0":1.7,"C18:1":20.02,"C18:2":60.3,"C18:3n3":10.44,"C20:0":0.06},"src":"Rabrenovic B. et al. Czech J. Food Sci., 2011, 29(1), 74–78: среднее 5 сортов, холодный отжим","url":"https://scidar.kg.ac.rs/bitstream/123456789/10063/1/10.17221-180-2010-cjfs.pdf","cat":"Литература","note":"","toc":{"aT":20.6,"gT":300.4,"dT":17.8},"tocSrc":"Rabrenovic B. et al. Czech J. Food Sci., 2011, 29(1), 74–78: среднее 5 сортов (β+γ учтены как γ)","tocUrl":"https://scidar.kg.ac.rs/bitstream/123456789/10063/1/10.17221-180-2010-cjfs.pdf"},{"id":"ricebran","name":"Рисовых отрубей","comp":{"C14:0":0.2,"C16:0":18.6,"C18:0":1.4,"C18:1":43.5,"C18:2":32.7,"C18:3n3":0.8,"C20:0":0.4,"C22:0":0.1,"C24:0":0.3},"src":"OCL, 2021, 28, ocl210058, табл. 1","url":"https://www.ocl-journal.org/articles/ocl/full_html/2021/01/ocl210058/T1.html","cat":"Литература","note":"","toc":{"aT":234.9,"gT":98.35,"dT":63.67,"aT3":114.31,"gT3":201.85,"dT3":48.95},"tocSrc":"Anwar F. et al. Grasas y Aceites, 2005, 56(2), 125–134: среднее 4 сортов","tocUrl":"https://grasasyaceites.revistas.csic.es/index.php/grasasyaceites/article/view/120"}]};
 const E = BlendEngine, FA = E.FA;
 const GROUP_RU = { sfa: "НЖК", mufa: "МНЖК", w6: "ω-6", w3: "ω-3" };
 const FA_LABEL = { "C18:3n3": "C18:3 n-3 (АЛК)", "C18:3n6": "C18:3 n-6 (ГЛК)", "C20:3n3": "C20:3 n-3", "C18:2": "C18:2 n-6", "C22:1": "C22:1 (эруковая)" };
-const KEY = "blendcalc.v1";
+const TOC_LABEL = { aT: "α-токоферол", bT: "β-токоферол", gT: "γ-токоферол", dT: "δ-токоферол", aT3: "α-токотриенол", bT3: "β-токотриенол", gT3: "γ-токотриенол", dT3: "δ-токотриенол" };
+const SOLID = ["palm", "palm_olein", "palm_kernel", "coconut"];
+const KEY = "blendcalc.v2", OLDKEY = "blendcalc.v1";
 const fmt = (v, d = 2) => (v == null || !isFinite(v)) ? "–" : v.toLocaleString("ru-RU", { minimumFractionDigits: d, maximumFractionDigits: d });
 const num = (s) => { if (s == null) return NaN; const t = String(s).replace(/\s/g, "").replace(",", "."); return t === "" ? NaN : Number(t); };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const indLabel = (id) => { const d = E.indById[id]; return d ? d.label + (d.unit ? ", " + d.unit : "") : id; };
+const digits = (id) => (["ai", "toc:aT"].includes(id) ? 3 : ["w6w3", "hH", "iv", "toc", "toc:gT", "cost"].includes(id) ? 1 : 2);
 
-let state = {
-  mode: "manual",
-  rows: [
-    { id: "sunflower", share: 60, min: 40, max: 90, price: "" },
-    { id: "rapeseed", share: 35, min: 0, max: 40, price: "" },
-    { id: "chia", share: 5, min: 0, max: 15, price: "" },
-  ],
-  opt: { objective: "cox", rMin: 5, rMax: 10,
-    cons: { erucicMax: { on: true, v: 2 }, sfaMax: { on: false, v: 12 }, w3Min: { on: false, v: 5 }, psMin: { on: false, v: 4 }, aiMax: { on: false, v: 0.08 } } },
-  overrides: {}, custom: [], example: true,
-};
-try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.rows) state = Object.assign(state, s); } catch (e) {}
+function defaultState() {
+  return {
+    mode: "manual",
+    rows: [
+      { id: "sunflower", share: 60, min: 40, max: 90, price: "" },
+      { id: "rapeseed", share: 35, min: 0, max: 40, price: "" },
+      { id: "chia", share: 5, min: 0, max: 15, price: "" },
+    ],
+    opt: {
+      goal: { ind: "cox", sense: "min", value: "" },
+      cons: [{ ind: "w6w3", op: ">=", value: 5 }, { ind: "w6w3", op: "<=", value: 10 }, { ind: "fa:C22:1", op: "<=", value: 2 }],
+      pool: "rows", allowed: DEFAULT_LIB.oils.map((o) => o.id).filter((id) => !SOLID.includes(id)), maxAny: 100,
+      countOn: false, cMin: 1, cMax: 3, minUse: 5,
+    },
+    overrides: {}, custom: [], example: true,
+  };
+}
+let state = defaultState();
+try {
+  const s2 = JSON.parse(localStorage.getItem(KEY) || "null");
+  if (s2 && s2.rows) state = Object.assign(state, s2, { opt: Object.assign(state.opt, s2.opt || {}) });
+  else { const s1 = JSON.parse(localStorage.getItem(OLDKEY) || "null"); if (s1 && s1.rows) { state.rows = s1.rows; state.overrides = s1.overrides || {}; state.custom = s1.custom || []; state.example = !!s1.example; } }
+} catch (e) {}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
 function library() {
@@ -401,18 +564,10 @@ function library() {
   return base.concat(state.custom.map((o) => Object.assign({ cat: "Мои масла", custom: true }, o)));
 }
 const oilById = (id) => library().find((o) => o.id === id);
-function groups(o) { const k = E.oilCoef(o); return k; }
-function ratioText(o) { const k = groups(o); return k.w3 > 1e-9 ? fmt(k.w6 / k.w3, 1) : "∞"; }
+const withPrice = (o, price) => Object.assign({}, o, { price: isFinite(num(price)) ? num(price) : NaN });
+function ratioText(o) { const k = E.coef(o); return k.w3 > 1e-9 ? fmt(k.w6 / k.w3, 1) : "∞"; }
 
-const CONS = [
-  { key: "erucicMax", label: "Эруковая кислота C22:1 не более, %" },
-  { key: "sfaMax", label: "НЖК не более, %" },
-  { key: "w3Min", label: "ω-3 ПНЖК не менее, %" },
-  { key: "psMin", label: "ПНЖК / НЖК не менее" },
-  { key: "aiMax", label: "Индекс AI не более" },
-];
-
-// ---------- rendering
+// ---------- rendering: composition table
 function optionsHtml(selected, taken) {
   const lib = library(); const cats = [...new Set(lib.map((o) => o.cat))];
   const catName = { Codex: "Стандарт Codex", "Литература": "Данные исследований", "Мои масла": "Мои масла" };
@@ -436,10 +591,9 @@ function renderRows() {
 }
 function currentBlend() {
   const rows = state.rows.filter((r) => oilById(r.id));
-  const oils = rows.map((r) => oilById(r.id));
+  const oils = rows.map((r) => withPrice(oilById(r.id), r.price));
   const shares = rows.map((r) => Math.max(0, num(r.share) || 0));
-  const total = shares.reduce((a, b) => a + b, 0);
-  return { rows, oils, shares, total };
+  return { rows, oils, shares, total: shares.reduce((a, b) => a + b, 0) };
 }
 function tile(label, value, hint, cls = "", chip = "") {
   return `<div class="tile ${cls}"><span class="lab">${label}</span><span class="val">${value}</span>${chip}${hint ? `<span class="hint">${hint}</span>` : ""}</div>`;
@@ -449,58 +603,82 @@ function renderResults() {
   const sumOk = Math.abs(total - 100) < 0.05;
   $("sum-chip").innerHTML = `<span class="chip ${sumOk ? "good" : "warn"}">Сумма долей: ${fmt(total, 2)} %</span>`;
   const nw = $("norm-warn");
-  if (total <= 0) { nw.hidden = false; nw.textContent = "Введите доли масел, чтобы рассчитать купаж."; $("tiles").innerHTML = ""; $("bars").innerHTML = ""; $("fa-table").innerHTML = ""; return null; }
+  if (total <= 0) { nw.hidden = false; nw.textContent = "Введите доли масел, чтобы рассчитать купаж."; ["tiles", "bars", "fa-table"].forEach((id) => { $(id).innerHTML = ""; }); return null; }
   nw.hidden = sumOk; if (!sumOk) nw.textContent = `Сумма долей ${fmt(total, 2)} % вместо 100 %: показатели рассчитаны для долей, пропорционально приведённых к 100 %.`;
   const x = shares.map((s) => s / total);
-  const F = E.blend(oils, x), I = E.indices(F);
-  let rchip = "";
-  if (I.ratio == null) rchip = `<span class="chip bad">нет ω-3</span>`;
-  else if (I.ratio >= 4.995 && I.ratio <= 10.005) rchip = `<span class="chip good">в диапазоне 5–10</span>`;
-  else rchip = `<span class="chip warn">${I.ratio > 10 ? "выше" : "ниже"} 5–10 : 1</span>`;
-  const prices = rows.map((r) => num(r.price));
-  const cost = prices.every((p) => isFinite(p)) ? x.reduce((a, xi, i) => a + xi * prices[i], 0) : null;
+  const R = E.evaluate(oils, x), F = R.F;
+  let rchip;
+  if (R.w6w3 == null) rchip = `<span class="chip bad">нет ω-3</span>`;
+  else if (R.w6w3 >= 4.995 && R.w6w3 <= 10.005) rchip = `<span class="chip good">в диапазоне 5–10</span>`;
+  else rchip = `<span class="chip warn">${R.w6w3 > 10 ? "выше" : "ниже"} 5–10 : 1</span>`;
   $("tiles").innerHTML = [
-    tile("ω-6 : ω-3", I.ratio == null ? "∞" : fmt(I.ratio, 1) + " : 1", "ориентир МР 2.3.1.0253-21", "key", rchip),
-    tile("Окисляемость COX", fmt(I.cox, 2), "ниже – стабильнее", "key"),
-    tile("Индекс атерогенности AI", fmt(I.ai, 3), "ниже – лучше"),
-    tile("Индекс тромбогенности TI", fmt(I.ti, 3), "ниже – лучше"),
-    tile("h/H", fmt(I.hH, 1), "выше – лучше"),
-    tile("ПНЖК / НЖК", fmt(I.ps, 2), "выше – лучше"),
-    tile("Йодное число (расч.)", fmt(I.iv, 1), "г I₂ / 100 г"),
-    tile("Стоимость 1 кг", cost == null ? "–" : fmt(cost, 2) + " ₽", cost == null ? "введите цены всех масел" : "по ценам компонентов"),
+    tile("ω-6 : ω-3", R.w6w3 == null ? "∞" : fmt(R.w6w3, 1) + " : 1", "ориентир МР 2.3.1.0253-21", "key", rchip),
+    tile("Окисляемость COX", fmt(R.cox, 2), "ниже – стабильнее", "key"),
+    tile("Витамин Е", R.vitE == null ? "–" : fmt(R.vitE, 1), R.vitE == null ? "нет данных: " + esc(R.tocMissing.join(", ")) : "мг α-ТЭ / 100 г", "key"),
+    tile("Индекс атерогенности AI", fmt(R.ai, 3), "ниже – лучше"),
+    tile("Индекс тромбогенности TI", fmt(R.ti, 3), "ниже – лучше"),
+    tile("h/H", fmt(R.hH, 1), "выше – лучше"),
+    tile("ПНЖК / НЖК", fmt(R.ps, 2), "выше – лучше"),
+    tile("Йодное число (расч.)", fmt(R.iv, 1), "г I₂ / 100 г"),
+    tile("Токоферолы, сумма", R.toc == null ? "–" : fmt(R.toc, 0), "мг / кг"),
+    tile("Стоимость 1 кг", R.cost == null ? "–" : fmt(R.cost, 2) + " ₽", R.cost == null ? "введите цены всех масел" : "по ценам компонентов"),
   ].join("");
-  const barRow = (name, o, cls) => {
-    const k = cls ? { sfa: I.sfa, mufa: I.mufa, w6: I.w6, w3: I.w3 } : E.oilCoef(o);
+  const barRow = (name, k, cls) => {
     const t = k.sfa + k.mufa + k.w6 + k.w3 || 1;
     const seg = (key, v) => { const w = v / t * 100; return `<span class="${key}" style="width:${w}%" title="${GROUP_RU[key]}: ${fmt(v, 1)} %">${w > 9 ? fmt(v, 0) : ""}</span>`; };
     return `<div class="barrow ${cls}"><span class="name" title="${esc(name)}">${esc(name)}</span><div class="bar">${seg("sfa", k.sfa)}${seg("mufa", k.mufa)}${seg("w6", k.w6)}${seg("w3", k.w3)}</div></div>`;
   };
-  $("bars").innerHTML = barRow("Купаж", null, "total") + oils.map((o, i) => barRow(`${o.name} · ${fmt(x[i] * 100, 1)} %`, o, "")).join("");
+  $("bars").innerHTML = barRow("Купаж", R, "total") + oils.map((o, i) => barRow(`${o.name} · ${fmt(x[i] * 100, 1)} %`, E.coef(o), "")).join("");
   const dotc = { sfa: "var(--c-sfa)", mufa: "var(--c-mufa)", w6: "var(--c-w6)", w3: "var(--c-w3)" };
   $("fa-table").innerHTML = FA.filter((f) => F[f] > 0.0005).map((f) => `<tr><td>${FA_LABEL[f] || f}</td><td class="grp"><span class="dot" style="background:${dotc[E.GROUP[f]]}"></span>${GROUP_RU[E.GROUP[f]]}</td><td class="n">${fmt(F[f], 2)}</td></tr>`).join("")
-    + `<tr class="sum"><td>НЖК</td><td></td><td class="n">${fmt(I.sfa, 2)}</td></tr><tr class="sum"><td>МНЖК</td><td></td><td class="n">${fmt(I.mufa, 2)}</td></tr><tr class="sum"><td>ПНЖК (ω-6 ${fmt(I.w6, 2)} + ω-3 ${fmt(I.w3, 2)})</td><td></td><td class="n">${fmt(I.pufa, 2)}</td></tr><tr class="sum"><td>Сумма идентифицированных</td><td></td><td class="n">${fmt(I.total, 2)}</td></tr>`;
-  return { rows, oils, x, F, I, cost };
+    + `<tr class="sum"><td>НЖК</td><td></td><td class="n">${fmt(R.sfa, 2)}</td></tr><tr class="sum"><td>МНЖК</td><td></td><td class="n">${fmt(R.mufa, 2)}</td></tr><tr class="sum"><td>ПНЖК (ω-6 ${fmt(R.w6, 2)} + ω-3 ${fmt(R.w3, 2)})</td><td></td><td class="n">${fmt(R.pufa, 2)}</td></tr><tr class="sum"><td>Сумма идентифицированных</td><td></td><td class="n">${fmt(R.total, 2)}</td></tr>`;
+  return { rows, oils, x, R };
 }
-function renderOptControls() {
-  $("objective").value = state.opt.objective;
-  $("r-min").value = fmt(state.opt.rMin, 1); $("r-max").value = fmt(state.opt.rMax, 1);
-  $("cons").innerHTML = CONS.map((c) => { const s = state.opt.cons[c.key];
-    return `<label><input type="checkbox" id="c-${c.key}" ${s.on ? "checked" : ""}> ${c.label} <input type="text" inputmode="decimal" class="numin" id="v-${c.key}" value="${fmt(s.v, c.key === "aiMax" ? 3 : 1)}" aria-label="${c.label}"></label>`; }).join("");
+
+// ---------- rendering: optimization task
+function indOptions(selected, forGoal) {
+  const cats = [...new Set(E.IND.map((d) => d.cat))];
+  return cats.map((c) => `<optgroup label="${c}">` + E.IND.filter((d) => d.cat === c)
+    .map((d) => `<option value="${d.id}" ${d.id === selected ? "selected" : ""}>${esc(d.label)}${d.unit ? ", " + esc(d.unit) : ""}</option>`).join("") + `</optgroup>`).join("");
+}
+function renderTask() {
+  const o = state.opt;
+  $("goal-sense").value = o.goal.sense; $("goal-ind").innerHTML = indOptions(o.goal.ind, true);
+  $("goal-val-wrap").hidden = o.goal.sense !== "target";
+  $("goal-val").value = o.goal.value === "" || o.goal.value == null ? "" : fmt(+o.goal.value, digits(o.goal.ind));
+  $("goal-unit").textContent = E.indById[o.goal.ind].unit || "";
+  const hints = { w6w3: "Отношение ω-6 к ω-3: при «приблизить к значению» введите, например, 7 для 7 : 1.", vitE: "Масла без данных о токоферолах будут исключены из подбора.", toc: "Масла без данных о токоферолах будут исключены из подбора.", cost: "Нужны цены масел: введите их в столбце «Цена»." };
+  $("goal-hint").textContent = hints[o.goal.ind] || (E.indById[o.goal.ind].ratio ? "Показатель – отношение двух величин; оптимум ищется бисекцией." : "");
+  $("cons").innerHTML = o.cons.map((c, j) => `<div class="con-row" data-j="${j}">
+    <select class="ind" id="con-ind-${j}" aria-label="Показатель ограничения ${j + 1}">${indOptions(c.ind, false)}</select>
+    <select id="con-op-${j}" aria-label="Знак ограничения ${j + 1}"><option value=">=" ${c.op === ">=" ? "selected" : ""}>не менее</option><option value="<=" ${c.op === "<=" ? "selected" : ""}>не более</option><option value="=" ${c.op === "=" ? "selected" : ""}>равно</option></select>
+    <input type="text" inputmode="decimal" class="numin" id="con-val-${j}" value="${fmt(+c.value, digits(c.ind))}" aria-label="Значение ограничения ${j + 1}">
+    <span class="small muted">${esc(E.indById[c.ind].unit || "")}</span>
+    <button type="button" class="icon" data-delcon="${j}" aria-label="Удалить ограничение" title="Удалить">×</button></div>`).join("")
+    || `<p class="small muted">Ограничений нет: учитываются только границы долей масел.</p>`;
+  $("pool-rows").setAttribute("aria-pressed", o.pool === "rows"); $("pool-lib").setAttribute("aria-pressed", o.pool === "lib");
+  $("pool-lib-box").hidden = o.pool !== "lib";
+  const allowed = new Set(o.allowed);
+  $("allowed").innerHTML = library().map((l) => `<label><input type="checkbox" data-allow="${l.id}" ${allowed.has(l.id) ? "checked" : ""}>${esc(l.name)}${l.toc ? "" : ' <span class="nod">без вит. Е</span>'}</label>`).join("");
+  $("max-any").value = fmt(+o.maxAny, 0);
+  $("count-on").checked = o.countOn; $("count-min").value = o.cMin; $("count-max").value = o.cMax; $("min-use").value = fmt(+o.minUse, 1);
+  $("count-min").disabled = $("count-max").disabled = !o.countOn;
 }
 function renderMode() {
   document.body.classList.toggle("opt", state.mode === "opt");
   $("mode-manual").setAttribute("aria-pressed", state.mode === "manual"); $("mode-opt").setAttribute("aria-pressed", state.mode === "opt");
 }
 function renderLibrary() {
-  $("lib-table").innerHTML = library().map((o) => { const k = E.oilCoef(o); const sum = FA.reduce((a, f) => a + (+o.comp[f] || 0), 0);
-    return `<tr><td>${esc(o.name)}${o.edited ? ' <span class="chip neutral">изменено</span>' : ""}${o.custom ? ' <span class="chip neutral">моё</span>' : ""}</td><td class="n">${fmt(+o.comp["C18:1"] || 0, 1)}</td><td class="n">${fmt(+o.comp["C18:2"] || 0, 1)}</td><td class="n">${fmt(k.w3, 1)}</td><td class="n">${ratioText(o)}</td><td class="n">${fmt(sum, 1)}</td><td class="small">${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.src)}</a>` : esc(o.src || "–")}</td><td><button type="button" class="ghost" data-edit="${o.id}">Изменить</button></td></tr>`; }).join("");
-  const srcs = [...new Map(DEFAULT_LIB.oils.map((o) => [o.url, o])).values()];
-  $("src-list").innerHTML = srcs.map((o) => `<li><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.src)}</a></li>`).join("")
-    + `<li>МР 2.3.1.0253-21. Нормы физиологических потребностей в энергии и пищевых веществах (ω-6 : ω-3 = 5–10 : 1)</li><li>Ulbricht T. L. V., Southgate D. A. T. The Lancet, 1991, 338, 985–992 (AI, TI)</li><li>Fatemi S. H., Hammond E. G. Lipids, 1980, 15, 379–385 (COX)</li><li>AOCS Cd 1c-85; ISO 3961:2024, прил. B (расчётное йодное число)</li>`;
+  $("lib-table").innerHTML = library().map((o) => { const k = E.coef(o);
+    return `<tr><td>${esc(o.name)}${o.edited ? ' <span class="chip neutral">изменено</span>' : ""}${o.custom ? ' <span class="chip neutral">моё</span>' : ""}</td><td class="n">${fmt(+o.comp["C18:1"] || 0, 1)}</td><td class="n">${fmt(+o.comp["C18:2"] || 0, 1)}</td><td class="n">${fmt(k.w3, 1)}</td><td class="n">${ratioText(o)}</td><td class="n">${k.vitE == null ? "нет данных" : fmt(k.vitE, 1)}</td><td class="small">${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.src)}</a>` : esc(o.src || "–")}</td><td><button type="button" class="ghost" data-edit="${o.id}">Изменить</button></td></tr>`; }).join("");
+  const srcs = new Map();
+  DEFAULT_LIB.oils.forEach((o) => { srcs.set(o.url, o.src); if (o.tocUrl) srcs.set(o.tocUrl, o.tocSrc); });
+  $("src-list").innerHTML = [...srcs].map(([u, s]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(s)}</a></li>`).join("")
+    + `<li>МР 2.3.1.0253-21. Нормы физиологических потребностей в энергии и пищевых веществах (ω-6 : ω-3 = 5–10 : 1)</li><li>Ulbricht T. L. V., Southgate D. A. T. The Lancet, 1991, 338, 985–992 (AI, TI)</li><li>Fatemi S. H., Hammond E. G. Lipids, 1980, 15, 379–385 (COX)</li><li>AOCS Cd 1c-85; ISO 3961:2024, прил. B (расчётное йодное число)</li><li>McLaughlin P. J., Weihrauch J. L. J. Am. Diet. Assoc., 1979, 75, 647–665 (α-токофероловый эквивалент)</li>`;
 }
-function renderAll() { renderMode(); renderRows(); renderOptControls(); renderLibrary(); renderResults(); }
+function renderAll() { renderMode(); renderRows(); renderTask(); renderLibrary(); renderResults(); }
 
-// ---------- events
+// ---------- events: composition
 $("mode-manual").onclick = () => { state.mode = "manual"; save(); renderMode(); };
 $("mode-opt").onclick = () => { state.mode = "opt"; save(); renderMode(); };
 $("rows").addEventListener("change", (e) => {
@@ -517,92 +695,128 @@ $("rows").addEventListener("click", (e) => { const b = e.target.closest("[data-d
 $("add-row").onclick = () => { const used = new Set(state.rows.map((r) => r.id)); const o = library().find((o) => !used.has(o.id)); if (!o) return;
   state.rows.push({ id: o.id, share: 0, min: 0, max: 100, price: "" }); state.example = false; save(); renderRows(); renderResults(); $("oil-" + (state.rows.length - 1)).focus(); };
 $("normalize").onclick = () => { const t = state.rows.reduce((a, r) => a + (num(r.share) || 0), 0); if (t <= 0) return; state.rows.forEach((r) => { r.share = (num(r.share) || 0) * 100 / t; }); save(); renderRows(); renderResults(); };
-$("objective").onchange = (e) => { state.opt.objective = e.target.value; save(); };
-$("r-min").oninput = (e) => { const n = num(e.target.value); if (isFinite(n)) { state.opt.rMin = n; save(); } };
-$("r-max").oninput = (e) => { const n = num(e.target.value); if (isFinite(n)) { state.opt.rMax = n; save(); } };
-$("cons").addEventListener("input", (e) => { const id = e.target.id; const key = id.slice(2);
-  if (id.startsWith("c-")) state.opt.cons[key].on = e.target.checked; else { const n = num(e.target.value); if (isFinite(n)) state.opt.cons[key].v = n; } save(); });
+
+// ---------- events: task
+$("goal-sense").onchange = (e) => { state.opt.goal.sense = e.target.value; save(); renderTask(); };
+$("goal-ind").onchange = (e) => { state.opt.goal.ind = e.target.value; save(); renderTask(); };
+$("goal-val").oninput = (e) => { const n = num(e.target.value); state.opt.goal.value = isFinite(n) ? n : ""; save(); };
+$("cons").addEventListener("change", (e) => { const row = e.target.closest("[data-j]"); if (!row) return; const j = +row.dataset.j;
+  if (e.target.id.startsWith("con-ind")) { state.opt.cons[j].ind = e.target.value; save(); renderTask(); }
+  if (e.target.id.startsWith("con-op")) { state.opt.cons[j].op = e.target.value; save(); } });
+$("cons").addEventListener("input", (e) => { if (!e.target.id.startsWith("con-val")) return; const j = +e.target.closest("[data-j]").dataset.j; const n = num(e.target.value);
+  e.target.classList.toggle("bad", !isFinite(n)); if (isFinite(n)) { state.opt.cons[j].value = n; save(); } });
+$("cons").addEventListener("click", (e) => { const b = e.target.closest("[data-delcon]"); if (!b) return; state.opt.cons.splice(+b.dataset.delcon, 1); save(); renderTask(); });
+$("add-con").onclick = () => { state.opt.cons.push({ ind: "w3", op: ">=", value: 3 }); save(); renderTask(); $("con-ind-" + (state.opt.cons.length - 1)).focus(); };
+$("pool-rows").onclick = () => { state.opt.pool = "rows"; save(); renderTask(); };
+$("pool-lib").onclick = () => { state.opt.pool = "lib"; save(); renderTask(); };
+$("allowed").addEventListener("change", (e) => { const id = e.target.dataset.allow; if (!id) return; const s = new Set(state.opt.allowed); e.target.checked ? s.add(id) : s.delete(id); state.opt.allowed = [...s]; save(); });
+$("allow-all").onclick = () => { state.opt.allowed = library().map((o) => o.id); save(); renderTask(); };
+$("allow-liquid").onclick = () => { state.opt.allowed = library().map((o) => o.id).filter((id) => !SOLID.includes(id)); save(); renderTask(); };
+$("max-any").oninput = (e) => { const n = num(e.target.value); if (isFinite(n)) { state.opt.maxAny = n; save(); } };
+$("count-on").onchange = (e) => { state.opt.countOn = e.target.checked; save(); renderTask(); };
+$("count-min").oninput = (e) => { const n = parseInt(e.target.value, 10); if (n >= 1) { state.opt.cMin = n; save(); } };
+$("count-max").oninput = (e) => { const n = parseInt(e.target.value, 10); if (n >= 1) { state.opt.cMax = n; save(); } };
+$("min-use").oninput = (e) => { const n = num(e.target.value); if (isFinite(n) && n >= 0) { state.opt.minUse = n; save(); } };
 
 function showMsg(cls, html) { const m = $("opt-msg"); m.className = "msg " + cls; m.innerHTML = html; m.hidden = false; }
+function describeTask() {
+  const o = state.opt, g = o.goal, sense = { min: "минимум", max: "максимум", target: "приближение к " + fmt(+g.value, digits(g.ind)) }[g.sense];
+  return { goal: `${sense}: ${indLabel(g.ind)}`, cons: o.cons.map((c) => `${indLabel(c.ind)} ${c.op === ">=" ? "не менее" : c.op === "<=" ? "не более" : "равно"} ${fmt(+c.value, digits(c.ind))}`) };
+}
 $("run-opt").onclick = () => {
   if (typeof window.solver === "undefined") { showMsg("bad", "Не загрузилась библиотека решателя. Проверьте подключение к интернету и обновите страницу."); return; }
-  const rows = state.rows.filter((r) => oilById(r.id)); const oils = rows.map((r) => oilById(r.id));
-  const bounds = rows.map((r) => [Math.max(0, num(r.min) || 0) / 100, Math.min(100, isFinite(num(r.max)) ? num(r.max) : 100) / 100]);
-  if (bounds.some(([a, b]) => a > b)) { showMsg("bad", "У одного из масел минимальная доля больше максимальной. Исправьте границы."); return; }
-  const rMin = state.opt.rMin, rMax = state.opt.rMax;
-  if (!(rMin > 0 && rMax >= rMin)) { showMsg("bad", "Задайте соотношение ω-6 : ω-3 так, чтобы «от» было больше нуля и не больше «до»."); return; }
-  const prices = rows.map((r) => num(r.price));
-  if (state.opt.objective === "cost" && !prices.every((p) => isFinite(p))) { showMsg("bad", "Для подбора по стоимости введите цены всех масел в столбце «Цена»."); return; }
-  const opt = { objective: state.opt.objective, rMin, rMax, bounds, prices };
-  CONS.forEach((c) => { const s = state.opt.cons[c.key]; if (s.on) opt[c.key] = s.v; });
-  const r = E.optimize(oils, opt, window.solver);
+  const o = state.opt;
+  if (o.goal.sense === "target" && !isFinite(+o.goal.value)) { showMsg("bad", "Введите целевое значение показателя."); return; }
+  if (o.countOn && !(o.cMin >= 1 && o.cMax >= o.cMin)) { showMsg("bad", "Число масел «от» должно быть не меньше 1 и не больше «до»."); return; }
+  const rowById = Object.fromEntries(state.rows.map((r) => [r.id, r]));
+  let cand;
+  if (o.pool === "rows") cand = state.rows.filter((r) => oilById(r.id)).map((r) => ({ oil: oilById(r.id), row: r }));
+  else cand = library().filter((l) => o.allowed.includes(l.id)).map((l) => ({ oil: l, row: rowById[l.id] }));
+  if (!cand.length) { showMsg("bad", "Не выбрано ни одного масла для подбора."); return; }
+  const oils = cand.map(({ oil, row }) => {
+    const lo = row ? Math.max(0, num(row.min) || 0) / 100 : 0;
+    const hi = row ? Math.min(100, isFinite(num(row.max)) ? num(row.max) : 100) / 100 : Math.min(100, Math.max(0, +o.maxAny)) / 100;
+    return Object.assign({}, oil, { lo, hi, price: row && isFinite(num(row.price)) ? num(row.price) : NaN });
+  });
+  const bad = oils.find((x) => x.lo > x.hi); if (bad) { showMsg("bad", `У масла «${esc(bad.name)}» минимальная доля больше максимальной.`); return; }
+  const task = { oils, goal: { ind: o.goal.ind, sense: o.goal.sense, value: +o.goal.value }, cons: o.cons.filter((c) => isFinite(+c.value)).map((c) => ({ ind: c.ind, op: c.op, value: +c.value })),
+    count: o.countOn ? { min: o.cMin, max: o.cMax } : null, minUse: o.countOn ? (+o.minUse || 0) / 100 : 0 };
+  let r;
+  try { r = E.solve(task, window.solver); } catch (err) { showMsg("bad", "Решатель не справился с задачей. Упростите её: снимите часть ограничений или уменьшите число масел."); return; }
   if (!r.feasible) {
-    const ks = oils.map((o) => `${esc(o.name)} – ${ratioText(o)}`).join("; ");
-    showMsg("bad", `Рецептура с такими ограничениями не существует. Расширьте границы долей, диапазон ω-6 : ω-3 или снимите часть ограничений. Соотношение ω-6 : ω-3 в выбранных маслах: ${ks}.`); return;
+    const why = { noToc: `Для масел ${esc((r.names || []).join(", "))} нет данных о токоферолах, а их минимальная доля больше нуля. Уберите их или задайте минимум 0.`,
+      noPrice: `Для подбора по стоимости введите цены масел: ${esc((r.names || []).join(", "))}.`, empty: "После исключения масел без нужных данных не осталось кандидатов." }[r.reason]
+      || "Рецептура, удовлетворяющая всем ограничениям, не существует. Расширьте границы долей, ослабьте ограничения, разрешите больше масел или увеличьте их допустимое число.";
+    showMsg("bad", why + (r.notes && r.notes.length ? " (" + esc(r.notes.join("; ")) + ")" : "")); return;
   }
-  rows.forEach((row, i) => { row.share = r.shares[i] * 100; });
+  // перенос результата в таблицу
+  const used = r.oils.map((oil, i) => ({ oil, x: r.shares[i] })).filter((u) => u.x > 1e-7);
+  if (o.pool === "lib") {
+    state.rows = used.map((u) => { const old = rowById[u.oil.id]; return Object.assign(old ? Object.assign({}, old) : { id: u.oil.id, min: 0, max: +o.maxAny, price: "" }, { share: u.x * 100 }); });
+  } else {
+    const m = Object.fromEntries(r.oils.map((oil, i) => [oil.id, r.shares[i]]));
+    state.rows.forEach((row) => { row.share = (m[row.id] || 0) * 100; });
+  }
   state.example = false; save(); renderRows(); const res = renderResults();
-  const goal = { cox: `COX = ${fmt(res.I.cox, 2)}`, cost: `стоимость ${fmt(res.cost, 2)} ₽/кг`, ai: `AI = ${fmt(res.I.ai, 3)}` }[state.opt.objective];
-  showMsg("good", `Оптимальная рецептура найдена: ${goal}, ω-6 : ω-3 = ${fmt(res.I.ratio, 2)} : 1. Доли подставлены в таблицу.`);
+  const gv = res.R[o.goal.ind];
+  const list = used.map((u) => `${esc(u.oil.name)} ${fmt(u.x * 100, 1)} %`).join(", ");
+  showMsg("good", `Рецептура найдена (${used.length} ${used.length === 1 ? "масло" : used.length < 5 ? "масла" : "масел"}): ${list}. ${esc(indLabel(o.goal.ind))} = ${fmt(gv, digits(o.goal.ind))}; ω-6 : ω-3 = ${fmt(res.R.w6w3, 2)} : 1; COX = ${fmt(res.R.cox, 2)}.` + (r.notes.length ? ` <span class="small">Примечание: ${esc(r.notes.join("; "))}.</span>` : ""));
 };
 
 // ---------- Excel export
 function colName(n) { let s = ""; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; }
 function buildWorkbook(res) {
-  const { rows, oils, x, F, I, cost } = res; const n = oils.length, last = n + 1;
+  const { rows, oils, x, R } = res; const n = oils.length, last = n + 1;
   const wb = XLSX.utils.book_new();
-  // Рецептура
-  const rec = [["Масло", "Доля, %", "Доля, доли ед.", "Мин., %", "Макс., %", "Цена, руб./кг", "Источник данных"]];
+  const rec = [["Масло", "Доля, %", "Доля, доли ед.", "Мин., %", "Макс., %", "Цена, руб./кг", "Источник ЖК-состава"]];
   rows.forEach((r, i) => rec.push([oils[i].name, x[i] * 100, null, num(r.min), num(r.max), isFinite(num(r.price)) ? num(r.price) : null, oils[i].src || ""]));
   rec.push(["Сумма", null, null]);
   const ws1 = XLSX.utils.aoa_to_sheet(rec);
   for (let i = 0; i < n; i++) ws1["C" + (i + 2)] = { t: "n", v: x[i], f: `B${i + 2}/SUM($B$2:$B$${last})` };
-  ws1["B" + (n + 2)] = { t: "n", v: x.reduce((a, b) => a + b, 0) * 100, f: `SUM(B2:B${last})` };
-  ws1["C" + (n + 2)] = { t: "n", v: 1, f: `SUM(C2:C${last})` };
+  ws1["B" + (n + 2)] = { t: "n", v: 100, f: `SUM(B2:B${last})` }; ws1["C" + (n + 2)] = { t: "n", v: 1, f: `SUM(C2:C${last})` };
   ws1["!cols"] = [{ wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 9 }, { wch: 9 }, { wch: 13 }, { wch: 70 }];
-  // Масла
-  const ws2 = XLSX.utils.aoa_to_sheet([["Масло"].concat(FA)].concat(oils.map((o) => [o.name].concat(FA.map((f) => +o.comp[f] || 0)))));
-  ws2["!cols"] = [{ wch: 30 }].concat(FA.map(() => ({ wch: 8 })));
+  // Масла: ЖК, токоферолы, α-ТЭ
+  const TOC = E.TOC, head = ["Масло"].concat(FA, TOC.map((t) => TOC_LABEL[t] + ", мг/кг"), ["α-ТЭ, мг/кг", "Источник токоферолов"]);
+  const ws2 = XLSX.utils.aoa_to_sheet([head].concat(oils.map((o) => [o.name].concat(FA.map((f) => +o.comp[f] || 0), TOC.map((t) => o.toc ? (+o.toc[t] || 0) : null), [null, o.toc ? (o.tocSrc || "") : "нет данных"]))));
+  const tc0 = 1 + FA.length, teCol = colName(tc0 + TOC.length);
+  oils.forEach((o, i) => { const r = i + 2; if (!o.toc) { ws2[teCol + r] = { t: "s", v: "нет данных" }; return; }
+    const c = (k) => colName(tc0 + TOC.indexOf(k)) + r;
+    ws2[teCol + r] = { t: "n", v: E.coef(o).vitE * 10, f: `${c("aT")}+0.5*${c("bT")}+0.1*${c("gT")}+0.03*${c("dT")}+0.3*${c("aT3")}+0.05*${c("bT3")}+0.01*${c("gT3")}` }; });
+  ws2["!cols"] = [{ wch: 30 }].concat(FA.map(() => ({ wch: 8 })), TOC.map(() => ({ wch: 12 })), [{ wch: 12 }, { wch: 60 }]);
   // ЖК_состав
-  const comp = [["Кислота", "Группа", "Купаж, % от суммы ЖК"]];
-  FA.forEach((f) => comp.push([f, GROUP_RU[E.GROUP[f]], F[f]]));
-  const ws3 = XLSX.utils.aoa_to_sheet(comp);
-  FA.forEach((f, j) => { const c = colName(j + 1); ws3["C" + (j + 2)] = { t: "n", v: F[f], f: `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Масла'!${c}$2:${c}$${last})` }; });
-  const lastFa = FA.length + 1;
-  const row = (f) => "'ЖК_состав'!C" + (FA.indexOf(f) + 2);
-  const sumif = (g) => `SUMIF('ЖК_состав'!$B$2:$B$${lastFa},"${g}",'ЖК_состав'!$C$2:$C$${lastFa})`;
+  const ws3 = XLSX.utils.aoa_to_sheet([["Кислота", "Группа", "Купаж, % от суммы ЖК"]].concat(FA.map((f) => [f, GROUP_RU[E.GROUP[f]], R.F[f]])));
+  FA.forEach((f, j) => { const c = colName(j + 1); ws3["C" + (j + 2)] = { t: "n", v: R.F[f], f: `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Масла'!${c}$2:${c}$${last})` }; });
   ws3["!cols"] = [{ wch: 12 }, { wch: 9 }, { wch: 22 }];
-  // Показатели
+  const lastFa = FA.length + 1, row = (f) => "'ЖК_состав'!C" + (FA.indexOf(f) + 2);
+  const sumif = (g) => `SUMIF('ЖК_состав'!$B$2:$B$${lastFa},"${g}",'ЖК_состав'!$C$2:$C$${lastFa})`;
   const P = [["Показатель", "Значение", "Комментарий"],
-    ["НЖК, %", I.sfa, ""], ["МНЖК, %", I.mufa, ""], ["ω-6 ПНЖК, %", I.w6, ""], ["ω-3 ПНЖК, %", I.w3, ""], ["ПНЖК, %", I.pufa, ""],
-    ["ω-6 : ω-3", I.ratio, "ориентир 5–10 : 1 (МР 2.3.1.0253-21)"], ["ПНЖК / НЖК", I.ps, "выше – лучше"],
-    ["Индекс атерогенности AI", I.ai, "ниже – лучше (Ulbricht, Southgate, 1991)"], ["Индекс тромбогенности TI", I.ti, "ниже – лучше"],
-    ["h/H", I.hH, "выше – лучше"], ["Расчётная окисляемость COX", I.cox, "ниже – стабильнее (Fatemi, Hammond, 1980)"],
-    ["Йодное число расчётное, г I2/100 г", I.iv, "AOCS Cd 1c-85"], ["Эруковая кислота C22:1, %", I.erucic, ""],
-    ["Стоимость 1 кг, руб.", cost, cost == null ? "цены заданы не для всех масел" : ""]];
+    ["НЖК, %", R.sfa, ""], ["МНЖК, %", R.mufa, ""], ["ω-6 ПНЖК, %", R.w6, ""], ["ω-3 ПНЖК, %", R.w3, ""], ["ПНЖК, %", R.pufa, ""],
+    ["ω-6 : ω-3", R.w6w3, "ориентир 5–10 : 1 (МР 2.3.1.0253-21)"], ["ПНЖК / НЖК", R.ps, "выше – лучше"],
+    ["Индекс атерогенности AI", R.ai, "ниже – лучше (Ulbricht, Southgate, 1991)"], ["Индекс тромбогенности TI", R.ti, "ниже – лучше"],
+    ["h/H", R.hH, "выше – лучше"], ["Расчётная окисляемость COX", R.cox, "ниже – стабильнее (Fatemi, Hammond, 1980)"],
+    ["Йодное число расчётное, г I2/100 г", R.iv, "AOCS Cd 1c-85"], ["Эруковая кислота C22:1, %", R.erucic, ""],
+    ["Витамин Е, мг α-ТЭ/100 г", R.vitE, R.vitE == null ? "нет данных о токоферолах: " + R.tocMissing.join(", ") : "McLaughlin, Weihrauch, 1979"],
+    ["Стоимость 1 кг, руб.", R.cost, R.cost == null ? "цены заданы не для всех масел" : ""]];
   const ws4 = XLSX.utils.aoa_to_sheet(P);
-  const fm = {
-    B2: sumif("НЖК"), B3: sumif("МНЖК"), B4: sumif("ω-6"), B5: sumif("ω-3"), B6: "B4+B5", B7: "IF(B5>0,B4/B5,\"–\")", B8: "B6/B2",
+  const fm = { B2: sumif("НЖК"), B3: sumif("МНЖК"), B4: sumif("ω-6"), B5: sumif("ω-3"), B6: "B4+B5", B7: "IF(B5>0,B4/B5,\"–\")", B8: "B6/B2",
     B9: `(${row("C12:0")}+4*${row("C14:0")}+${row("C16:0")})/(B5+B4+B3)`,
     B10: `(${row("C14:0")}+${row("C16:0")}+${row("C18:0")})/(0.5*B3+0.5*B4+3*B5+IF(B4>0,B5/B4,0))`,
     B11: `(${row("C18:1")}+${row("C18:2")}+${row("C18:3n3")})/(${row("C12:0")}+${row("C14:0")}+${row("C16:0")})`,
     B12: `(${row("C18:1")}+10.3*${row("C18:2")}+21.6*(${row("C18:3n3")}+${row("C18:3n6")}))/100`,
-    B13: `0.95*${row("C16:1")}+0.86*${row("C18:1")}+1.732*${row("C18:2")}+2.616*(${row("C18:3n3")}+${row("C18:3n6")})`,
-    B14: row("C22:1"),
-  };
+    B13: `0.95*${row("C16:1")}+0.86*${row("C18:1")}+1.732*${row("C18:2")}+2.616*(${row("C18:3n3")}+${row("C18:3n6")})`, B14: row("C22:1") };
+  if (R.vitE != null) fm.B15 = `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Масла'!$${teCol}$2:$${teCol}$${last})/10`;
+  if (R.cost != null) fm.B16 = `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Рецептура'!$F$2:$F$${last})`;
   Object.entries(fm).forEach(([a, f]) => { const v = ws4[a] ? ws4[a].v : null; ws4[a] = { t: typeof v === "number" ? "n" : "s", v: v == null ? "" : v, f }; });
-  if (cost != null) ws4.B15 = { t: "n", v: cost, f: `SUMPRODUCT('Рецептура'!$C$2:$C$${last},'Рецептура'!$F$2:$F$${last})` };
-  ws4["!cols"] = [{ wch: 36 }, { wch: 12 }, { wch: 46 }];
-  // Параметры
+  ws4["!cols"] = [{ wch: 36 }, { wch: 12 }, { wch: 60 }];
   const par = [["Параметр", "Значение"], ["Дата расчёта", new Date().toLocaleDateString("ru-RU")],
-    ["Режим", state.mode === "opt" ? "Оптимизация (симплекс-метод, javascript-lp-solver)" : "Ручной расчёт"]];
+    ["Режим", state.mode === "opt" ? "Оптимизация (симплекс-метод и метод ветвей и границ, javascript-lp-solver)" : "Ручной расчёт"]];
   if (state.mode === "opt") {
-    par.push(["Цель", $("objective").selectedOptions[0].textContent], ["ω-6 : ω-3", `от ${fmt(state.opt.rMin, 1)} до ${fmt(state.opt.rMax, 1)} : 1`]);
-    CONS.forEach((c) => { const s = state.opt.cons[c.key]; if (s.on) par.push([c.label, s.v]); });
+    const d = describeTask(); par.push(["Функция цели", d.goal]); d.cons.forEach((c, j) => par.push(["Ограничение " + (j + 1), c]));
+    par.push(["Масла для подбора", state.opt.pool === "rows" ? "только из таблицы" : "из справочника: " + library().filter((l) => state.opt.allowed.includes(l.id)).map((l) => l.name).join(", ")]);
+    if (state.opt.countOn) par.push(["Число масел", `от ${state.opt.cMin} до ${state.opt.cMax}; мин. доля включённого масла ${fmt(+state.opt.minUse, 1)} %`]);
   }
-  par.push(["Модель", "Массовый баланс ЖК: F_j = Σ x_i·a_ij; ω-6 : ω-3 линеаризовано как Σ x_i(ω6_i − R·ω3_i)"],
-    ["Примечание", "Синие исходные данные можно менять: формулы на листах ЖК_состав и Показатели пересчитаются"]);
-  oils.forEach((o) => par.push(["Источник: " + o.name, (o.src || "") + (o.url ? " – " + o.url : "")]));
+  par.push(["Модель", "Массовый баланс: F_j = Σ x_i·a_ij; отношения линеаризованы как Σ x_i(числитель_i − r·знаменатель_i)"]);
+  oils.forEach((o) => { par.push(["ЖК-состав: " + o.name, (o.src || "") + (o.url ? " – " + o.url : "")]); par.push(["Токоферолы: " + o.name, o.toc ? (o.tocSrc || "") + (o.tocUrl ? " – " + o.tocUrl : "") : "нет данных"]); });
   const ws5 = XLSX.utils.aoa_to_sheet(par); ws5["!cols"] = [{ wch: 36 }, { wch: 110 }];
   [[ws1, "Рецептура"], [ws2, "Масла"], [ws3, "ЖК_состав"], [ws4, "Показатели"], [ws5, "Параметры"]].forEach(([w, nm]) => XLSX.utils.book_append_sheet(wb, w, nm));
   return wb;
@@ -613,11 +827,9 @@ $("export").onclick = async () => {
   const msg = $("export-msg"); msg.textContent = "";
   if (typeof XLSX === "undefined") { msg.textContent = "Не загрузилась библиотека Excel. Проверьте интернет и обновите страницу."; return; }
   const res = renderResults(); if (!res) { msg.textContent = "Сначала задайте доли масел."; return; }
-  const wb = buildWorkbook(res);
-  const filename = `kupazh_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const wb = buildWorkbook(res), filename = `kupazh_${new Date().toISOString().slice(0, 10)}.xlsx`;
   if (downloadsNs) {
-    try { const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      await downloadsNs.save({ filename, data: new Blob([buf]) }); msg.textContent = "Файл сохранён."; }
+    try { const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" }); await downloadsNs.save({ filename, data: new Blob([buf]) }); msg.textContent = "Файл сохранён."; }
     catch (e) { msg.textContent = e && e.code === "declined" ? "Сохранение отменено." : "Не удалось сохранить файл в этом окне."; }
     return;
   }
@@ -627,36 +839,41 @@ $("export").onclick = async () => {
 // ---------- library editor
 let editing = null;
 function openEditor(id) {
-  const o = id ? oilById(id) : { id: null, name: "", src: "", comp: {} };
-  editing = id; $("editor").hidden = false; $("ed-title").textContent = id ? "Изменить состав масла" : "Новое масло";
-  $("ed-name").value = o.name; $("ed-src").value = o.src || "";
+  const o = id ? oilById(id) : { id: null, name: "", src: "", comp: {}, toc: null, tocSrc: "" };
+  editing = id; $("editor").hidden = false; $("ed-title").textContent = id ? "Изменить данные масла" : "Новое масло";
+  $("ed-name").value = o.name; $("ed-src").value = o.src || ""; $("ed-tsrc").value = o.toc ? (o.tocSrc || "") : "";
   $("ed-fa").innerHTML = FA.map((f, j) => `<label for="ed-f${j}">${FA_LABEL[f] || f}<input type="text" inputmode="decimal" class="numin" id="ed-f${j}" value="${o.comp[f] ? fmt(+o.comp[f], 2) : ""}" placeholder="0"></label>`).join("");
-  $("ed-delete").hidden = !(id && (o.custom || o.edited)); $("ed-delete").textContent = o.custom ? "Удалить масло" : "Вернуть исходный состав";
+  $("ed-toc").innerHTML = E.TOC.map((t) => `<label for="ed-t-${t}">${TOC_LABEL[t]}<input type="text" inputmode="decimal" class="numin" id="ed-t-${t}" value="${o.toc && o.toc[t] ? fmt(+o.toc[t], 1) : ""}" placeholder="${o.toc ? "0" : "–"}"></label>`).join("");
+  $("ed-delete").hidden = !(id && (o.custom || o.edited)); $("ed-delete").textContent = o.custom ? "Удалить масло" : "Вернуть исходные данные";
   updEdSum(); $("ed-name").focus();
 }
 function edComp() { const c = {}; FA.forEach((f, j) => { const n = num($("ed-f" + j).value); if (isFinite(n) && n > 0) c[f] = n; }); return c; }
-function updEdSum() { const s = Object.values(edComp()).reduce((a, b) => a + b, 0); const el = $("ed-sum"); el.textContent = `Сумма: ${fmt(s, 2)} %`; el.className = "chip " + (Math.abs(s - 100) < 1 ? "good" : "warn"); }
+function edToc() { const t = {}; let any = false; E.TOC.forEach((k) => { const v = $("ed-t-" + k).value.trim(); if (v !== "") { any = true; const n = num(v); if (isFinite(n) && n > 0) t[k] = n; } }); return any ? t : null; }
+function updEdSum() { const s = Object.values(edComp()).reduce((a, b) => a + b, 0); const el = $("ed-sum"); el.textContent = `Сумма ЖК: ${fmt(s, 2)} %`; el.className = "chip " + (Math.abs(s - 100) < 1 ? "good" : "warn"); }
 $("ed-fa").addEventListener("input", updEdSum);
 $("lib-table").addEventListener("click", (e) => { const b = e.target.closest("[data-edit]"); if (b) openEditor(b.dataset.edit); });
 $("lib-new").onclick = () => openEditor(null);
 $("ed-cancel").onclick = () => { $("editor").hidden = true; editing = null; };
 $("ed-delete").onclick = () => {
   const o = oilById(editing); if (!o) return;
-  if (o.custom) { state.custom = state.custom.filter((c) => c.id !== editing); state.rows = state.rows.filter((r) => r.id !== editing); if (!state.rows.length) state.rows.push({ id: "sunflower", share: 100, min: 0, max: 100, price: "" }); }
+  if (o.custom) { state.custom = state.custom.filter((c) => c.id !== editing); state.rows = state.rows.filter((r) => r.id !== editing); state.opt.allowed = state.opt.allowed.filter((id) => id !== editing);
+    if (!state.rows.length) state.rows.push({ id: "sunflower", share: 100, min: 0, max: 100, price: "" }); }
   else delete state.overrides[editing];
   $("editor").hidden = true; editing = null; save(); renderAll();
 };
 $("editor").addEventListener("submit", (e) => {
   e.preventDefault(); const name = $("ed-name").value.trim(); if (!name) { $("ed-name").focus(); return; }
-  const rec = { name, src: $("ed-src").value.trim() || "Пользовательские данные", comp: edComp(), url: "" };
+  const toc = edToc();
+  const rec = { name, src: $("ed-src").value.trim() || "Пользовательские данные", comp: edComp(), url: "", toc, tocSrc: toc ? ($("ed-tsrc").value.trim() || "Пользовательские данные") : "", tocUrl: "" };
   if (editing && DEFAULT_LIB.oils.some((o) => o.id === editing)) state.overrides[editing] = rec;
   else if (editing) { const c = state.custom.find((c) => c.id === editing); Object.assign(c, rec); }
-  else state.custom.push(Object.assign({ id: "my_" + Date.now() }, rec));
+  else { const id = "my_" + Date.now(); state.custom.push(Object.assign({ id }, rec)); state.opt.allowed.push(id); }
   $("editor").hidden = true; editing = null; save(); renderAll();
 });
 $("lib-reset").onclick = () => { $("reset-confirm").hidden = false; };
 $("reset-no").onclick = () => { $("reset-confirm").hidden = true; };
 $("reset-yes").onclick = () => { state.overrides = {}; state.custom = []; state.rows = state.rows.filter((r) => DEFAULT_LIB.oils.some((o) => o.id === r.id));
+  state.opt.allowed = state.opt.allowed.filter((id) => DEFAULT_LIB.oils.some((o) => o.id === id));
   if (!state.rows.length) state.rows.push({ id: "sunflower", share: 100, min: 0, max: 100, price: "" }); $("reset-confirm").hidden = true; save(); renderAll(); };
 
 renderAll();
